@@ -1,6 +1,8 @@
 """
-Dynamo Compile Transformers Example
-=========================
+.. _torch_compile_transformer:
+
+Compiling a Transformer using torch.compile and TensorRT
+==============================================================
 
 This interactive script is intended as a sample of the `torch_tensorrt.dynamo.compile` workflow on a transformer-based model."""
 
