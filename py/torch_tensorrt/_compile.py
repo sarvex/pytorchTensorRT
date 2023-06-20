@@ -61,17 +61,15 @@ def _get_target_ir(module_type: _ModuleType, ir: str) -> _IRType:
     else:
         if ir == "default":
             # Options are listed in order of preference
-            if module_is_tsable:
+            if module_is_fxable:
                 logging.log(
-                    logging.Level.Info, "ir was set to default, using TorchScript as ir"
+                    logging.Level.Info, "ir was set to default, using fx_ts_compat as ir"
                 )
-                return _IRType.ts
-            elif module_is_fxable:
+                return _IRType.fx_ts_compat
+            elif module_is_tsable:
                 raise ValueError(
-                    "Was given a torch.fx.GraphModule, fx is not currently supported by Torch-TensorRT"
+                    "ir is set to default but a TorchScript module is provided. Please provide torch.fx.GraphModule or torch.nn.Module as input or set ir = ts"
                 )
-                # logging.log(logging.Level.Info, "ir was set to default, using TorchScript as fx")
-                # return _IRType.fx
             else:
                 raise ValueError("Module was provided with in an unsupported format")
         else:
