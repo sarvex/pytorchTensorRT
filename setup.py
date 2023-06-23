@@ -1,11 +1,14 @@
 import os
 import sys
 import glob
+import yaml
+from dataclasses import dataclass
 import setuptools
 from setuptools import setup, Extension, find_packages
 from setuptools.command.build_ext import build_ext
 from setuptools.command.develop import develop
 from setuptools.command.install import install
+from setuptools.command.editable_wheel import editable_wheel
 from distutils.cmd import Command
 from wheel.bdist_wheel import bdist_wheel
 
@@ -16,26 +19,35 @@ import subprocess
 import platform
 import warnings
 
-from versions import (
-    __version__,
-    __cuda_version__,
-    __cudnn_version__,
-    __tensorrt_version__,
-)
-
-dir_path = os.path.dirname(os.path.realpath(__file__))
+dir_path = os.path.dirname(os.path.realpath(__file__)) + "/py"
 
 CXX11_ABI = False
-
 JETPACK_VERSION = None
-
 FX_ONLY = False
-
 LEGACY = False
-
 RELEASE = False
-
 CI_RELEASE = False
+
+__version__: str = "0.0.0"
+__cuda_version__: str = "0.0"
+__cudnn_version__: str = "0.0"
+__tensorrt_version__: str = "0.0"
+
+
+def load_version_info():
+    global __version__
+    global __cuda_version__
+    global __cudnn_version__
+    global __tensorrt_version__
+    with open("versions.yml", "r") as stream:
+        versions = yaml.safe_load(stream)
+        __version__ = versions["__version__"]
+        __cuda_version__ = versions["__cuda_version__"]
+        __cudnn_version__ = versions["__cudnn_version__"]
+        __tensorrt_version__ = versions["__tensorrt_version__"]
+
+
+load_version_info()
 
 
 def get_git_revision_short_hash() -> str:
@@ -182,7 +194,9 @@ def copy_libtorchtrt(multilinux=False):
         )
     else:
         os.system(
-            "tar -xzf ../bazel-bin/libtorchtrt.tar.gz --strip-components=2 -C "
+            "tar -xzf "
+            + dir_path
+            + "/../bazel-bin/libtorchtrt.tar.gz --strip-components=1 -C "
             + dir_path
             + "/torch_tensorrt"
         )
@@ -247,6 +261,27 @@ class BdistCommand(bdist_wheel):
         bdist_wheel.run(self)
 
 
+class EditableWheelCommand(editable_wheel):
+    description = "Builds the package in development mode"
+
+    def initialize_options(self):
+        editable_wheel.initialize_options(self)
+
+    def finalize_options(self):
+        editable_wheel.finalize_options(self)
+
+    def run(self):
+        if FX_ONLY:
+            gen_version_file()
+            editable_wheel.run(self)
+        else:
+            global CXX11_ABI
+            build_libtorchtrt_pre_cxx11_abi(develop=True, cxx11_abi=CXX11_ABI)
+            gen_version_file()
+            copy_libtorchtrt()
+            editable_wheel.run(self)
+
+
 class CleanCommand(Command):
     """Custom clean command to tidy up the project root."""
 
@@ -303,10 +338,13 @@ ext_modules = [
     cpp_extension.CUDAExtension(
         "torch_tensorrt._C",
         [
-            "torch_tensorrt/csrc/torch_tensorrt_py.cpp",
-            "torch_tensorrt/csrc/tensorrt_backend.cpp",
-            "torch_tensorrt/csrc/tensorrt_classes.cpp",
-            "torch_tensorrt/csrc/register_tensorrt_classes.cpp",
+            "py/" + f
+            for f in [
+                "torch_tensorrt/csrc/torch_tensorrt_py.cpp",
+                "torch_tensorrt/csrc/tensorrt_backend.cpp",
+                "torch_tensorrt/csrc/tensorrt_classes.cpp",
+                "torch_tensorrt/csrc/register_tensorrt_classes.cpp",
+            ]
         ],
         library_dirs=[
             (dir_path + "/torch_tensorrt/lib/"),
@@ -417,47 +455,19 @@ else:
 
 setup(
     name="torch_tensorrt",
-    version=__version__,
-    author="NVIDIA",
-    author_email="narens@nvidia.com",
-    url="https://nvidia.github.io/torch-tensorrt",
-    description="Torch-TensorRT is a package which allows users to automatically compile PyTorch and TorchScript modules to TensorRT while remaining in PyTorch",
-    long_description_content_type="text/markdown",
-    long_description=long_description,
     ext_modules=ext_modules,
-    install_requires=[
-        "torch >=2.1.dev,<2.2" if not LEGACY else "torch >=1.13.0,<2.0",
-        "pyyaml",
-        "packaging",
-    ],
-    setup_requires=[],
+    version=__version__,
     cmdclass={
         "install": InstallCommand,
         "clean": CleanCommand,
         "develop": DevelopCommand,
         "build_ext": cpp_extension.BuildExtension,
         "bdist_wheel": BdistCommand,
+        "editable_wheel": EditableWheelCommand,
     },
     zip_safe=False,
-    license="BSD",
     packages=packages if FX_ONLY else find_packages(),
     package_dir=package_dir if FX_ONLY else {},
-    classifiers=[
-        "Development Status :: 5 - Production/Stable",
-        "Environment :: GPU :: NVIDIA CUDA",
-        "License :: OSI Approved :: BSD License",
-        "Intended Audience :: Developers",
-        "Intended Audience :: Science/Research",
-        "Operating System :: POSIX :: Linux",
-        "Programming Language :: C++",
-        "Programming Language :: Python",
-        "Programming Language :: Python :: Implementation :: CPython",
-        "Topic :: Scientific/Engineering",
-        "Topic :: Scientific/Engineering :: Artificial Intelligence",
-        "Topic :: Software Development",
-        "Topic :: Software Development :: Libraries",
-    ],
-    python_requires=">=3.8",
     include_package_data=True,
     package_data={
         "torch_tensorrt": package_data_list,
