@@ -18,17 +18,6 @@ patch_wheel() {
     LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$1/torch/lib:$1/tensorrt/:${CUDA_HOME}/lib64:${CUDA_HOME}/lib64/stubs $2/bin/python -m auditwheel repair  $(cat ${PROJECT_DIR}/py/ci/soname_excludes.params) --plat manylinux_2_34_x86_64 dist/torch_tensorrt-*-$3-linux_x86_64.whl
 }
 
-py37() {
-    cd /workspace/project
-    PY_BUILD_CODE=cp37-cp37m
-    PY_VERSION=3.7
-    PY_NAME=python${PY_VERSION}
-    PY_DIR=/opt/python/${PY_BUILD_CODE}
-    PY_PKG_DIR=${PY_DIR}/lib/${PY_NAME}/site-packages/
-    build_wheel ${PY_DIR}
-    patch_wheel ${PY_PKG_DIR} ${PY_DIR} ${PY_BUILD_CODE}
-}
-
 py38() {
     cd /workspace/project
     PY_BUILD_CODE=cp38-cp38
@@ -92,8 +81,10 @@ libtorchtrt() {
     PY_NAME=python${PY_VERSION}
     PY_DIR=/opt/python/${PY_BUILD_CODE}
     PY_PKG_DIR=${PY_DIR}/lib/${PY_NAME}/site-packages/
-    build_wheel ${PY_DIR}
-    patch_wheel ${PY_PKG_DIR} ${PY_DIR} ${PY_BUILD_CODE}
+    ${PY_DIR}/bin/python -m pip install --upgrade pip
+    ${PY_DIR}/bin/python -m pip install -r py/requirements.txt
+    ${PY_DIR}/bin/python -m pip install setuptools wheel auditwheel
+    bazel build //:libtorchtrt --platforms //toolchains:ci_rhel_x86_64_linux -c opt --noshow_progress
     CUDA_VERSION=$(cd ${PROJECT_DIR}/py && ${PY_DIR}/bin/python3 -c "import versions; versions.cuda_version()")
     TORCHTRT_VERSION=$(cd ${PROJECT_DIR}/py && ${PY_DIR}/bin/python3 -c "import versions; versions.torch_tensorrt_version()")
     TRT_VERSION=$(cd ${PROJECT_DIR}/py && ${PY_DIR}/bin/python3 -c "import versions; versions.tensorrt_version()")
@@ -110,8 +101,10 @@ libtorchtrt_pre_cxx11_abi() {
     PY_NAME=python${PY_VERSION}
     PY_DIR=/opt/python/${PY_BUILD_CODE}
     PY_PKG_DIR=${PY_DIR}/lib/${PY_NAME}/site-packages/
-    build_wheel ${PY_DIR}
-    patch_wheel ${PY_PKG_DIR} ${PY_DIR} ${PY_BUILD_CODE}
+    ${PY_DIR}/bin/python -m pip install --upgrade pip
+    ${PY_DIR}/bin/python -m pip install -r py/requirements.txt
+    ${PY_DIR}/bin/python -m pip install setuptools wheel auditwheel
+    bazel build //:libtorchtrt --config pre_cxx11_abi --platforms //toolchains:ci_rhel_x86_64_linux -c opt --noshow_progress
     CUDA_VERSION=$(cd ${PROJECT_DIR}/py && ${PY_DIR}/bin/python3 -c "import versions; versions.cuda_version()")
     TORCHTRT_VERSION=$(cd ${PROJECT_DIR}/py && ${PY_DIR}/bin/python3 -c "import versions; versions.torch_tensorrt_version()")
     TRT_VERSION=$(cd ${PROJECT_DIR}/py && ${PY_DIR}/bin/python3 -c "import versions; versions.tensorrt_version()")

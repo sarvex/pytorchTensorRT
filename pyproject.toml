@@ -1,15 +1,14 @@
 [build-system]
 requires = [
-    "setuptools",
-    "packaging",
-    "wheel",
-    "numpy",
-    "ninja",
-    "pyyaml",
-    "setuptools",
-    "cffi",
-    "typing_extensions",
-    "future",
+    "setuptools==68.0.0",
+    "packaging>=23.1",
+    "wheel>=0.40.0",
+    "numpy>=1.25.0",
+    "ninja>=1.11.0",
+    "pyyaml>=6.0",
+    "cffi>=1.15.1",
+    "typing_extensions>=4.7.0",
+    "future>=0.18.3",
     "tensorrt>=8.6,<8.7",
     #"torch >=2.0.0,<2.1.0",
     "torch==2.1.0.dev20230619+cu121",
@@ -75,6 +74,38 @@ no_implicit_optional = true
 
 [tool.setuptools]
 package-dir = {"" = "py"}
+include-package-data = true
+
+[tool.setuptools.package-data]
+torch_tensorrt = [
+    "BUILD",
+    "WORKSPACE",
+    "include/torch_tensorrt/*.h",
+    "include/torch_tensorrt/core/*.h",
+    "include/torch_tensorrt/core/conversion/*.h",
+    "include/torch_tensorrt/core/conversion/conversionctx/*.h",
+    "include/torch_tensorrt/core/conversion/converters/*.h",
+    "include/torch_tensorrt/core/conversion/evaluators/*.h",
+    "include/torch_tensorrt/core/conversion/tensorcontainer/*.h",
+    "include/torch_tensorrt/core/conversion/var/*.h",
+    "include/torch_tensorrt/core/ir/*.h",
+    "include/torch_tensorrt/core/lowering/*.h",
+    "include/torch_tensorrt/core/lowering/passes/*.h",
+    "include/torch_tensorrt/core/partitioning/*.h",
+    "include/torch_tensorrt/core/partitioning/segmentedblock/*.h",
+    "include/torch_tensorrt/core/partitioning/partitioninginfo/*.h",
+    "include/torch_tensorrt/core/partitioning/partitioningctx/*.h",
+    "include/torch_tensorrt/core/plugins/*.h",
+    "include/torch_tensorrt/core/plugins/impl/*.h",
+    "include/torch_tensorrt/core/runtime/*.h",
+    "include/torch_tensorrt/core/util/*.h",
+    "include/torch_tensorrt/core/util/logging/*.h",
+    "bin/*",
+    "lib/*"
+]
+
+[tool.setuptools.exclude-package-data]
+torch_tensorrt = ["csrc/*"]
 
 [tool.setuptools.packages.find]
 where = ["py"]
