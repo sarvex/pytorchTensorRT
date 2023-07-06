@@ -8,4 +8,3 @@ wget https://github.com/bazelbuild/bazelisk/releases/download/v1.17.0/bazelisk-l
     && chmod +x /usr/bin/bazel
 
 cp ${dirname}/toolchains/ci_workspaces/WORKSPACE.x86_64.release.rhel ${dirname}/WORKSPACE
-echo -e "READY"
