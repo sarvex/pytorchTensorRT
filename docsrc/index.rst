@@ -73,6 +73,7 @@ Tutorials
    tutorials/_rendered_examples/dynamo/dynamo_compile_resnet_example
    tutorials/_rendered_examples/dynamo/dynamo_compile_transformers_example
    tutorials/_rendered_examples/dynamo/dynamo_compile_advanced_usage
+   tutorials/_rendered_examples/dynamo/dynamo_module_level_acceleration
 
 Python API Documenation
 ------------------------
