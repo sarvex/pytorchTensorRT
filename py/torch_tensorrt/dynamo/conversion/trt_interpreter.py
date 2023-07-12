@@ -29,6 +29,10 @@ TRT_INTERPRETER_CALL_PRE_OBSERVER: Observer[
 ] = Observer("TRT_INTERPRETER_CALL_PRE_OBSERVER")
 
 
+class UnsupportedOperatorException(RuntimeError):
+    pass
+
+
 class TRTInterpreterResult(NamedTuple):
     engine: Any
     input_names: Sequence[str]
@@ -280,7 +284,7 @@ class TRTInterpreter(torch.fx.Interpreter):
         converter = CONVERTERS.get(self._cur_node)
 
         if not converter:
-            raise RuntimeError(
+            raise UnsupportedOperatorException(
                 f"Conversion of module of type {submod_type} not currently supported!"
             )
 
@@ -290,7 +294,7 @@ class TRTInterpreter(torch.fx.Interpreter):
     def call_function(self, target, args, kwargs):
         converter = CONVERTERS.get(self._cur_node)
         if not converter:
-            raise RuntimeError(
+            raise UnsupportedOperatorException(
                 f"Conversion of function {torch.typename(target)} not currently supported!"
             )
 
@@ -302,7 +306,7 @@ class TRTInterpreter(torch.fx.Interpreter):
         converter = CONVERTERS.get(self._cur_node)
 
         if not converter:
-            raise RuntimeError(
+            raise UnsupportedOperatorException(
                 f"Conversion of method {target} not currently supported!"
             )
 

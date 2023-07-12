@@ -6,6 +6,12 @@ from torch_tensorrt.fx.types import (
     TRTTensor,
 )
 
+from torch_tensorrt.fx.converters.converter_utils import (
+    unified_dtype_converter,
+    Frameworks,
+)
+
+
 
 def dynamic_unsupported(node: torch.fx.Node) -> bool:
     # Validate that none of the inputs to the node have Dynamic shapes
@@ -48,18 +54,17 @@ def cast_trt_tensor(
     Args:
         network (TRTNetwork): A TensorRT network
         input_val (TRTTensor): A TRT Tensor to cast to a new data type
-        dtype (TRTDataType): The TRTDataType to cast the input Tensor to
+        dtype (TRTDataType, torch.dtype, np.dtype): The data type to cast the input Tensor to
         name (str): Name of the calling layer
     Returns:
         A TensorRT ITensor which has been casted to the specified dtype
     """
-    #
-    if input_val.dtype != dtype:
+    trt_dtype = unified_dtype_converter(dtype, Frameworks.TRT)
+
+    if input_val.dtype != trt_dtype:
         identity_layer = network.add_identity(input_val)
-        identity_layer.set_output_type(0, dtype)
-        identity_layer.name = (
-            f"Cast ITensor {input_val.name} from {input_val.dtype} to {dtype} - {name}"
-        )
+        identity_layer.set_output_type(0, trt_dtype)
+        identity_layer.name = f"Cast ITensor {input_val.name} from {input_val.dtype} to {trt_dtype} - {name}"
         return identity_layer.get_output(0)
     else:
         return input_val

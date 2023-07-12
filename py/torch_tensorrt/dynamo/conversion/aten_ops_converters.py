@@ -1,9 +1,10 @@
 import logging
 from typing import Dict, Sequence, Tuple, Union
 import torch
+import operator
 from torch_tensorrt.fx.converters import acc_ops_converters
 from ..converter_registry import dynamo_tensorrt_converter
-from torch.fx.node import Argument, Target
+from torch.fx.node import Argument, Target, Node
 
 from torch_tensorrt.fx.types import TRTNetwork, TRTTensor
 from torch_tensorrt.dynamo.conversion import SourceIR, impl
@@ -277,4 +278,78 @@ def aten_ops_slice(
         args[2],
         args[3],
         args[4],
+    )
+
+
+def to_copy_dtype_validator(to_copy_node: Node):
+    allowed_casts = {torch.float, torch.int32, torch.bool, torch.int8, torch.float16}
+
+    # Validate input node has convertible kwargs
+    if "dtype" in to_copy_node.kwargs:
+        if to_copy_node.kwargs["dtype"] in allowed_casts:
+            return True
+        else:
+            _LOGGER.debug(
+                f"_to_copy converter rejected node {to_copy_node} with dtype {to_copy_node.kwargs['dtype']}"
+            )
+            return False
+    else:
+        _LOGGER.debug(
+            f"_to_copy converter rejected node {to_copy_node} with kwargs {to_copy_node.kwargs}"
+        )
+        return False
+
+
+@dynamo_tensorrt_converter(
+    torch.ops.aten._to_copy.default, capability_validator=to_copy_dtype_validator
+)
+def aten_ops_to_copy_dtype(
+    network: TRTNetwork,
+    target: Target,
+    args: Tuple[Argument, ...],
+    kwargs: Dict[str, Argument],
+    name: str,
+) -> Union[TRTTensor, Sequence[TRTTensor]]:
+    return impl.cast.to_copy(
+        network,
+        target,
+        SourceIR.ATEN,
+        name,
+        args[0],
+        kwargs["dtype"],
+    )
+
+
+@dynamo_tensorrt_converter(operator.getitem)
+def operator_getitem(
+    network: TRTNetwork,
+    target: Target,
+    args: Tuple[Argument, ...],
+    kwargs: Dict[str, Argument],
+    name: str,
+) -> Union[TRTTensor, Sequence[TRTTensor]]:
+    return impl.evaluators.getitem(
+        network,
+        target,
+        SourceIR.ATEN,
+        name,
+        args[0],
+        args[1],
+    )
+
+
+@dynamo_tensorrt_converter(torch.ops.aten.clone.default)
+def aten_ops_clone(
+    network: TRTNetwork,
+    target: Target,
+    args: Tuple[Argument, ...],
+    kwargs: Dict[str, Argument],
+    name: str,
+) -> Union[TRTTensor, Sequence[TRTTensor]]:
+    return impl.evaluators.clone(
+        network,
+        target,
+        SourceIR.ATEN,
+        name,
+        args[0],
     )

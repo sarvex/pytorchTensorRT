@@ -211,6 +211,7 @@ class DispatchTestCase(TRTTestCase):
         expected_ops: Set[Callable],
         unexpected_ops: Optional[Set[Callable]] = None,
         customized_passes: List[Callable] = None,
+        disable_passes: bool = False,
     ):
         # Torchdynamo+aot proxytensor tracer
         # Below are common passes
@@ -228,6 +229,10 @@ class DispatchTestCase(TRTTestCase):
         # Combine with customized passes specific to any model
         if customized_passes:
             passes_list.extend(customized_passes)
+
+        if disable_passes:
+            passes_list = []
+
         fx_module, _ = aten_tracer.trace(mod, original_inputs)
         for passes in passes_list:
             pr: PassResult = passes(fx_module)
@@ -254,9 +259,17 @@ class DispatchTestCase(TRTTestCase):
         rtol=1e-03,
         atol=1e-03,
         precision=torch.float,
+        disable_passes=False,
     ):
         mod.eval()
-        mod = self.generate_graph(mod, inputs, expected_ops, unexpected_ops, None)
+        mod = self.generate_graph(
+            mod,
+            inputs,
+            expected_ops,
+            unexpected_ops,
+            None,
+            disable_passes=disable_passes,
+        )
 
         if apply_passes is not None:
             pass_tracer = chain_passes(*apply_passes)
@@ -278,10 +291,19 @@ class DispatchTestCase(TRTTestCase):
         unexpected_ops=None,
         rtol=1e-03,
         atol=1e-03,
+        disable_passes=False,
     ):
         mod.eval()
         inputs = Input.create_inputs_from_specs(input_specs)
-        mod = self.generate_graph(mod, inputs, expected_ops, unexpected_ops, None)
+
+        mod = self.generate_graph(
+            mod,
+            inputs,
+            expected_ops,
+            unexpected_ops,
+            None,
+            disable_passes=disable_passes,
+        )
 
         interp = TRTInterpreter(
             mod,

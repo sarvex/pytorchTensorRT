@@ -10,3 +10,5 @@ from . import select
 from . import shape
 from . import squeeze
 from . import unsqueeze
+from . import cast
+from . import evaluators
