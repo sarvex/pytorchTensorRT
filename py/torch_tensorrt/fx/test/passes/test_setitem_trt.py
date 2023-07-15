@@ -8,10 +8,14 @@ from torch_tensorrt.fx.tools.common_fx2trt import AccTestCase
 
 class TestTransformSetitem(AccTestCase):
     def test_setitem1d(self):
+
+
+
         class TestModule(torch.nn.Module):
             def forward(self, x, y):
-                y[0:2] = x
+                y[:2] = x
                 return y
+
 
         inputs = [torch.randn(2), torch.randn(3)]
         m = TestModule()

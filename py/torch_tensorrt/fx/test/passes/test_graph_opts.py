@@ -172,10 +172,13 @@ class GraphOptsTest(unittest.TestCase):
         )
 
     def test_common_subexpression_elimination_string_arg(self):
+
+
+
         class TestModule(torch.nn.Module):
             def forward(self, a):
-                x = _test_op(["foo", "bar"], a)
-                return x
+                return _test_op(["foo", "bar"], a)
+
 
         self._test_opt_with_module(
             module=TestModule(),

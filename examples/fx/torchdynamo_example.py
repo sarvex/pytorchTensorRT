@@ -215,8 +215,7 @@ def run_configuration_benchmark(
     else:
         print("Lowering mode is not available!", "red")
 
-    result = Result(module=module, input=input, conf=conf, time_sec=time)
-    return result
+    return Result(module=module, input=input, conf=conf, time_sec=time)
 
 
 if __name__ == "__main__":

@@ -33,7 +33,7 @@ def convert_module(
     if not isinstance(module_outputs, (list, tuple)):
         module_outputs = [module_outputs]
 
-    output_dtypes = list(output.dtype for output in module_outputs)
+    output_dtypes = [output.dtype for output in module_outputs]
 
     interpreter = TRTInterpreter(
         module,
@@ -62,15 +62,14 @@ def convert_module(
             output_names=interpreter_result.output_names,
         )
 
-    else:
-        from torch_tensorrt.dynamo._TorchTensorRTModule import TorchTensorRTModule
+    from torch_tensorrt.dynamo._TorchTensorRTModule import TorchTensorRTModule
 
-        with io.BytesIO() as engine_bytes:
-            engine_bytes.write(interpreter_result.engine.serialize())
-            engine_str = engine_bytes.getvalue()
-        return TorchTensorRTModule(
-            serialized_engine=engine_str,
-            name=name,
-            input_binding_names=interpreter_result.input_names,
-            output_binding_names=interpreter_result.output_names,
-        )
+    with io.BytesIO() as engine_bytes:
+        engine_bytes.write(interpreter_result.engine.serialize())
+        engine_str = engine_bytes.getvalue()
+    return TorchTensorRTModule(
+        serialized_engine=engine_str,
+        name=name,
+        input_binding_names=interpreter_result.input_names,
+        output_binding_names=interpreter_result.output_names,
+    )

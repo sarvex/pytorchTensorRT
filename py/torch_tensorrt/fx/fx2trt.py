@@ -61,8 +61,7 @@ class TRTInterpreter(torch.fx.Interpreter):
             flag |= EXPLICIT_PRECISION
         self.network = self.builder.create_network(flag)
 
-        missing_ops = self.validate_conversion()
-        if missing_ops:
+        if missing_ops := self.validate_conversion():
             warnings.warn(
                 "Interpretation will fail due to missing operations \n"
                 + "\n".join(f"{i}" for i in missing_ops)
@@ -77,7 +76,7 @@ class TRTInterpreter(torch.fx.Interpreter):
         self._output_names: List[str] = []
         self._itensor_to_tensor_meta: Dict[
             trt.tensorrt.ITensor, TensorMetadata
-        ] = dict()
+        ] = {}
 
     def validate_input_specs(self):
         for shape, _, _, shape_ranges, has_batch_dim in self.input_specs:
@@ -360,24 +359,23 @@ class TRTInterpreter(torch.fx.Interpreter):
             raise RuntimeError("TensorRT requires all outputs to be Tensor!")
 
         for i, output in enumerate(outputs):
-            if any(
-                op_name in output.name.split("_")
-                for op_name in (
-                    "eq",
-                    "gt",
-                    "lt",
-                    "or",
-                    "xor",
-                    "and",
-                    "not",
-                    "ne",
-                    "isinf",
-                    "any",
+            output_bool = any(
+                (
+                    op_name in output.name.split("_")
+                    for op_name in (
+                        "eq",
+                        "gt",
+                        "lt",
+                        "or",
+                        "xor",
+                        "and",
+                        "not",
+                        "ne",
+                        "isinf",
+                        "any",
+                    )
                 )
-            ):
-                output_bool = True
-            else:
-                output_bool = False
+            )
             name = f"output{i}"
             output.name = name
             self.network.mark_output(output)

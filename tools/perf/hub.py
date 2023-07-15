@@ -47,10 +47,10 @@ BENCHMARK_MODELS = {
 
 
 def get(n, m, manifest):
-    print("Downloading {}".format(n))
-    traced_filename = "models/" + n + "_traced.jit.pt"
-    script_filename = "models/" + n + "_scripted.jit.pt"
-    pytorch_filename = "models/" + n + "_pytorch.pt"
+    print(f"Downloading {n}")
+    traced_filename = f"models/{n}_traced.jit.pt"
+    script_filename = f"models/{n}_scripted.jit.pt"
+    pytorch_filename = f"models/{n}_pytorch.pt"
     x = torch.ones((1, 3, 300, 300)).cuda()
     if n == "bert_base_uncased":
         traced_model = m["model"]
@@ -97,9 +97,9 @@ def download_models(version_matches, manifest):
             manifest = get(n, m, manifest)
     else:
         for n, m in BENCHMARK_MODELS.items():
-            scripted_filename = "models/" + n + "_scripted.jit.pt"
-            traced_filename = "models/" + n + "_traced.jit.pt"
-            pytorch_filename = "models/" + n + "_pytorch.pt"
+            scripted_filename = f"models/{n}_scripted.jit.pt"
+            traced_filename = f"models/{n}_traced.jit.pt"
+            pytorch_filename = f"models/{n}_pytorch.pt"
             # Check if model file exists on disk
 
             # Extract model specifications as list and ensure all desired formats exist
@@ -129,7 +129,7 @@ def download_models(version_matches, manifest):
                     and os.path.exists(pytorch_filename)
                 )
             ):
-                print("Skipping {} ".format(n))
+                print(f"Skipping {n} ")
                 continue
             manifest = get(n, m, manifest)
 
@@ -143,7 +143,7 @@ def main():
         manifest = {"version": torch_version}
 
         # Creating an empty manifest file for overwriting post setup
-        os.system("touch {}".format(MANIFEST_FILE))
+        os.system(f"touch {MANIFEST_FILE}")
     else:
 
         # Load manifest if already exists

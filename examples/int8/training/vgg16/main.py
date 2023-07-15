@@ -50,8 +50,8 @@ PARSER.add_argument(
 
 args = PARSER.parse_args()
 for arg in vars(args):
-    print(" {} {}".format(arg, getattr(args, arg)))
-state = {k: v for k, v in args._get_kwargs()}
+    print(f" {arg} {getattr(args, arg)}")
+state = dict(args._get_kwargs())
 
 if args.seed is None:
     args.seed = random.randint(1, 10000)
@@ -64,7 +64,7 @@ now = datetime.now()
 
 timestamp = datetime.timestamp(now)
 
-writer = SummaryWriter(args.tensorboard + "/test_" + str(timestamp))
+writer = SummaryWriter(f"{args.tensorboard}/test_{str(timestamp)}")
 classes = (
     "plane",
     "car",
@@ -146,8 +146,8 @@ def main():
         model = nn.DataParallel(model)
 
     if args.start_from != 0:
-        ckpt_file = args.ckpt_dir + "/ckpt_epoch" + str(args.start_from) + ".pth"
-        print("Loading from checkpoint {}".format(ckpt_file))
+        ckpt_file = f"{args.ckpt_dir}/ckpt_epoch{str(args.start_from)}.pth"
+        print(f"Loading from checkpoint {ckpt_file}")
         assert os.path.isfile(ckpt_file)
         ckpt = torch.load(ckpt_file)
         model.load_state_dict(ckpt["model_state_dict"])
@@ -238,7 +238,7 @@ def test(model, dataloader, crit, epoch):
 
 
 def save_checkpoint(state, ckpt_dir="checkpoint"):
-    print("Checkpoint {} saved".format(state["epoch"]))
+    print(f'Checkpoint {state["epoch"]} saved')
     filename = "ckpt_epoch" + str(state["epoch"]) + ".pth"
     filepath = os.path.join(ckpt_dir, filename)
     torch.save(state, filepath)
@@ -249,7 +249,7 @@ def adjust_lr(optimizer, epoch):
     new_lr = state["lr"] * (0.5 ** (epoch // 40)) if state["lr"] > 1e-7 else state["lr"]
     if new_lr != state["lr"]:
         state["lr"] = new_lr
-        print("Updating learning rate: {}".format(state["lr"]))
+        print(f'Updating learning rate: {state["lr"]}')
         for param_group in optimizer.param_groups:
             param_group["lr"] = state["lr"]
 

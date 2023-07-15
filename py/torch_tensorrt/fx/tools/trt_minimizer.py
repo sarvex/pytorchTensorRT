@@ -30,7 +30,7 @@ def lower_mod_default(
             engine_bytes.write(interpreter_result.engine.serialize())
             engine_str = engine_bytes.getvalue()
 
-        res_mod = TorchTensorRTModule(
+        return TorchTensorRTModule(
             engine_str,
             name=str(type(mod)),
             input_binding_names=interpreter_result.input_names,
@@ -39,12 +39,11 @@ def lower_mod_default(
             # cuda_graph_batch_size=lower_setting.cuda_graph_batch_size, # NOTE: Not sure what this is supposed to do
         )
     else:
-        res_mod = TRTModule(
+        return TRTModule(
             interpreter_result.engine,
             interpreter_result.input_names,
             interpreter_result.output_names,
         )
-    return res_mod
 
 
 class TensorRTMinizerSetting(net_min_base._MinimizerSettingBase):

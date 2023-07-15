@@ -72,10 +72,7 @@ class TRTTestCase(TestCase):
         precision=LowerPrecision.FP32,
     ):
         with torch.no_grad():
-            cuda_inputs = []
-            for i in inputs:
-                cuda_inputs.append(i.cuda())
-
+            cuda_inputs = [i.cuda() for i in inputs]
             mod.eval()
             if len(expected_ops):
                 self.assert_has_op(mod, expected_ops)
@@ -145,10 +142,7 @@ class TRTTestCase(TestCase):
 
         """
         with torch.no_grad():
-            cuda_inputs = []
-            for i in inputs:
-                cuda_inputs.append(i.cuda())
-
+            cuda_inputs = [i.cuda() for i in inputs]
             mod.eval()
             if len(expected_ops):
                 self.assert_has_op(mod, expected_ops)
@@ -177,10 +171,7 @@ class TRTTestCase(TestCase):
     def run_test_with_error(self, mod, inputs, interpreter, expect_error):
         with self.assertRaises(expect_error):
             with torch.no_grad():
-                cuda_inputs = []
-                for i in inputs:
-                    cuda_inputs.append(i.cuda())
-
+                cuda_inputs = [i.cuda() for i in inputs]
                 mod.eval()
                 interpreter.run(lower_precision=LowerPrecision.FP32)
 

@@ -95,11 +95,7 @@ class TSInput(Input):
                 internal_in.opt = self.shape
             internal_in.input_is_dynamic = False
 
-        if self.dtype != _enums.dtype.unknown:
-            self._explicit_set_dtype = True
-        else:
-            self._explicit_set_dtype = False
-
+        self._explicit_set_dtype = self.dtype != _enums.dtype.unknown
         internal_in.dtype = Input._parse_dtype(self.dtype)
         internal_in._explicit_set_dtype = self._explicit_set_dtype
         internal_in.format = Input._parse_format(self.format)

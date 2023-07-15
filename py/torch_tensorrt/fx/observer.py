@@ -53,13 +53,8 @@ class Observer(t.Generic[TObserverCallback]):
             try:
                 yield
             finally:
-                try:
+                with contextlib.suppress(ValueError):
                     self._get_callbacks().remove(callback)
-                except ValueError:
-                    # Callback should be in the callbacks list. I'm just being
-                    # extra cautious here. I don't want it to throw and affect
-                    # business logic.
-                    pass
 
         return _add()
 

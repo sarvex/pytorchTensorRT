@@ -93,9 +93,7 @@ def get_positive_dim(dim: int, dim_size: int) -> int:
     Returns:
         A positive integer that represent the same dimension as the given dim.
     """
-    if dim < 0:
-        return dim % dim_size
-    return dim
+    return dim % dim_size if dim < 0 else dim
 
 
 def set_layer_name(
@@ -210,10 +208,7 @@ def has_dynamic_shape(shape: Shape) -> bool:
     Returns:
         A boolean value indicates whether there's dynamic dim in the shape.
     """
-    count = 0
-    for s in shape:
-        count += 1 if s == -1 else 0
-    return count
+    return sum(1 if s == -1 else 0 for s in shape)
 
 
 def get_axes_for_reduce_op(
@@ -304,13 +299,15 @@ def get_trt_tensor(
     if isinstance(input_val, bool):
         input_val = int(input_val)
 
-    if isinstance(input_val, torch.Tensor) and (
-        input_val.dtype == torch.bool or input_val.dtype == torch.int64
-    ):
+    if isinstance(input_val, torch.Tensor) and input_val.dtype in [
+        torch.bool,
+        torch.int64,
+    ]:
         input_val = input_val.to(torch.int32)
-    elif isinstance(input_val, np.ndarray) and (
-        input_val.dtype == np.bool_ or input_val.dtype == np.int64
-    ):
+    elif isinstance(input_val, np.ndarray) and input_val.dtype in [
+        np.bool_,
+        np.int64,
+    ]:
         input_val = input_val.to(np.int32)
 
     if isinstance(input_val, (torch.Tensor, np.ndarray, int, float)):
@@ -563,7 +560,7 @@ def add_binary_elementwise_layer(
             assert len(lhs_val.shape) >= len(
                 rhs_val.shape
             ), f"{lhs_val.shape} >= {rhs_val.shape}"
-        elif not is_lhs_trt_tensor and is_rhs_trt_tensor:
+        elif not is_lhs_trt_tensor:
             assert len(rhs_val.shape) >= len(
                 lhs_val.shape
             ), f"{rhs_val.shape} >= {lhs_val.shape}"
@@ -574,7 +571,7 @@ def add_binary_elementwise_layer(
     layer = network.add_elementwise(lhs_val, rhs_val, op_type)
     set_layer_name(layer, target, name)
     output = layer.get_output(0)
-    output.name = output.name + "_" + target.__name__
+    output.name = f"{output.name}_{target.__name__}"
     return output
 
 
@@ -622,7 +619,7 @@ def add_unary_layer(
     layer = network.add_unary(input_val, operation_type)
     set_layer_name(layer, target, name)
     output = layer.get_output(0)
-    output.name = output.name + "_" + target.__name__
+    output.name = f"{output.name}_{target.__name__}"
     return layer.get_output(0)
 
 
@@ -837,7 +834,7 @@ def trunc_div(
         target,
         f"{name}_floor_div",
     )
-    output = add_binary_elementwise_layer(
+    return add_binary_elementwise_layer(
         network,
         abs_floor_output,
         sign_output,
@@ -845,8 +842,6 @@ def trunc_div(
         target,
         f"{name}_output",
     )
-
-    return output
 
 
 def get_python_op_from_trt_elementwise_op(

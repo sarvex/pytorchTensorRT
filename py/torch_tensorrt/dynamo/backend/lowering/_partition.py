@@ -15,10 +15,10 @@ from torch_tensorrt.fx.converter_registry import CONVERTERS
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SINGLE_NODE_PARTITIONS: Set[str] = set(
+DEFAULT_SINGLE_NODE_PARTITIONS: Set[str] = {
     _get_qualified_name(to_replace.new_operator)
     for to_replace in SUBSTITUTION_REGISTRY.values()
-)
+}
 
 
 class TRTPartitioner(CapabilityBasedPartitioner):
@@ -59,7 +59,7 @@ class TRTPartitioner(CapabilityBasedPartitioner):
     def propose_partitions(self) -> List[Partition]:
         # Propose partitions using the default, then refine the results
         initial_proposed_partitions = super().propose_partitions()
-        partitions = {i: part for i, part in enumerate(initial_proposed_partitions)}
+        partitions = dict(enumerate(initial_proposed_partitions))
 
         # For each partition, determine whether or not the number of computational operators
         # exceeds the threshold, and if not, remove that partition
@@ -99,8 +99,7 @@ class TRTPartitioner(CapabilityBasedPartitioner):
 
     def partition_and_fuse(self) -> GraphModule:
         partitions = self.propose_partitions()
-        fused_gm = self.fuse_partitions(partitions)
-        return fused_gm
+        return self.fuse_partitions(partitions)
 
 
 class TorchTensorRTOperatorSupport(OperatorSupport):

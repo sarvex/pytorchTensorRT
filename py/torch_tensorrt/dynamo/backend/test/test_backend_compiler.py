@@ -9,6 +9,7 @@ from torch_tensorrt.dynamo.common_utils.test_utils import DECIMALS_OF_AGREEMENT
 
 class TestTRTModuleNextCompilation(TestCase):
     def test_trt_module_next_full_support(self):
+
         class FullySupportedMultiOp(torch.nn.Module):
             def forward(self, x, y):
                 out = x - y
@@ -53,10 +54,11 @@ class TestTRTModuleNextCompilation(TestCase):
             max_diff,
             0,
             DECIMALS_OF_AGREEMENT,
-            f"TRT outputs don't match with the original model.",
+            "TRT outputs don't match with the original model.",
         )
 
     def test_trt_module_next_partial_support(self):
+
         class PartiallySupportedMultiOp(torch.nn.Module):
             def forward(self, x, y):
                 out = x - y
@@ -121,12 +123,13 @@ class TestTRTModuleNextCompilation(TestCase):
             max_diff,
             0,
             DECIMALS_OF_AGREEMENT,
-            f"TRT outputs don't match with the original model.",
+            "TRT outputs don't match with the original model.",
         )
 
 
 class TestCompilationOptions(TestCase):
     def test_trt_specific_options(self):
+
         class SupportedMultiOp(torch.nn.Module):
             def forward(self, x, y):
                 out = x - y
@@ -165,7 +168,7 @@ class TestCompilationOptions(TestCase):
             max_diff,
             0,
             DECIMALS_OF_AGREEMENT,
-            f"TRT outputs don't match with the original model.",
+            "TRT outputs don't match with the original model.",
         )
 
 

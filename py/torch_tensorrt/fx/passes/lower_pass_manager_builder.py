@@ -107,10 +107,14 @@ class LowerPassManagerBuilder:
         passes = [
             wrapper(self._trace_func, self._input),
         ]
-        for p in self.lower_setting.customized_fuse_pass.passes:
-            passes.append(wrapper(p, self._input))
-        for p in self.lower_setting.lower_basic_fuse_pass.passes:
-            passes.append(wrapper(p, self._input))
+        passes.extend(
+            wrapper(p, self._input)
+            for p in self.lower_setting.customized_fuse_pass.passes
+        )
+        passes.extend(
+            wrapper(p, self._input)
+            for p in self.lower_setting.lower_basic_fuse_pass.passes
+        )
         if (
             hasattr(self.lower_setting, "lower_precision")
             and self.lower_setting.lower_precision is LowerPrecision.FP16
@@ -121,20 +125,25 @@ class LowerPassManagerBuilder:
             passes.append(wrapper(fix_clamp_numerical_limits_to_fp16, self._input))
 
         passes.append(inplace_wrapper(common_subexpression_elimination))
-        passes.append(
-            inplace_wrapper(lambda m: FUSE_PASSES_POST_OBSERVER.observe(m, self._input))
+        passes.extend(
+            (
+                inplace_wrapper(
+                    lambda m: FUSE_PASSES_POST_OBSERVER.observe(m, self._input)
+                ),
+                fix_reshape_batch_dim,
+            )
         )
-        passes.append(fix_reshape_batch_dim)
-
         return PassManager.build_from_passlist(passes)
 
     def graph_optimization_pass_aten(self) -> PassManager:
-        passes = []
-
-        for p in self.lower_setting.customized_fuse_pass.passes:
-            passes.append(wrapper(p, self._input))
-        for p in self.lower_setting.lower_basic_fuse_pass.passes:
-            passes.append(wrapper(p, self._input))
+        passes = [
+            wrapper(p, self._input)
+            for p in self.lower_setting.customized_fuse_pass.passes
+        ]
+        passes.extend(
+            wrapper(p, self._input)
+            for p in self.lower_setting.lower_basic_fuse_pass.passes
+        )
         # TODO fix this pass for aten graph
         # if (
         #     hasattr(self.lower_setting, "lower_precision")
@@ -267,45 +276,37 @@ class LowerPassManagerBuilder:
     ) -> PassManager:
         self._input = input
         self._additional_input = additional_input
-        passes = []
+        passes = [self._default_replace_mutable_op_pass()]
 
-        passes.append(self._default_replace_mutable_op_pass())
         passes.append(self._const_fold_pass())
         passes.append(self.graph_optimization_pass())
         passes.append(self._split_pass())
         passes.append(self._trt_lower_pass())
 
-        pm = PassManager.build_from_passlist(passes)
-        return pm
+        return PassManager.build_from_passlist(passes)
 
     def build_aten2trt_lower_pipeline(
         self, input: Input, additional_input: Optional[Input] = None
     ) -> PassManager:
         self._input = input
         self._additional_input = additional_input
-        passes = []
-        passes.append(
-            wrapper(self._trace_func, self._input),
-        )
+        passes = [wrapper(self._trace_func, self._input)]
         passes.append(self.graph_optimization_pass_aten())
         passes.append(self._split_pass())
         passes.append(self._trt_lower_pass())
 
-        pm = PassManager.build_from_passlist(passes)
-        return pm
+        return PassManager.build_from_passlist(passes)
 
     def build_default_lower_pipeline(
         self, input: Input, additional_input: Optional[Input] = None
     ) -> PassManager:
         self._input = input
         self._additional_input = additional_input
-        passes = []
+        passes = [self._default_replace_mutable_op_pass()]
 
-        passes.append(self._default_replace_mutable_op_pass())
         passes.append(self._const_fold_pass())
         passes.append(self.graph_optimization_pass())
         passes.append(self._split_pass())
         passes.append(self._default_lower_pass())
 
-        pm = PassManager.build_from_passlist(passes)
-        return pm
+        return PassManager.build_from_passlist(passes)

@@ -101,7 +101,7 @@ if version.parse(torch.__version__) >= version.parse("2.1.dev"):
 
 def _register_with_torch():
     trtorch_dir = os.path.dirname(__file__)
-    torch.ops.load_library(trtorch_dir + "/lib/libtorchtrt.so")
+    torch.ops.load_library(f"{trtorch_dir}/lib/libtorchtrt.so")
 
 
 _register_with_torch()

@@ -327,16 +327,12 @@ class AccRewritingTracer(Tracer):
         """
 
         ## Hacky way to decide inplace ops
-        if type(target) != str:
-            name_target = target.__name__
-        else:
-            name_target = target
-
+        name_target = target.__name__ if type(target) != str else target
         allow_list = ["and_", "or_"]  # python  operator.and_,  operator.or_
         if (
             name_target[-1] == "_"
             and name_target[0] != "_"
-            and not (name_target in allow_list)
+            and name_target not in allow_list
             and kind != "placeholder"
         ):
             raise RuntimeError(
@@ -490,9 +486,12 @@ def _remove_exceptions(gm: torch.fx.GraphModule) -> bool:
     changed = False
     for node in reversed(gm.graph.nodes):
         if node.op == "call_module" and (
-            isinstance(gm.get_submodule(node.target), ConditionalExceptionWrapper)
-            or isinstance(
-                gm.get_submodule(node.target), ConditionalExceptionBoolCondWrapper
+            isinstance(
+                gm.get_submodule(node.target),
+                (
+                    ConditionalExceptionWrapper,
+                    ConditionalExceptionBoolCondWrapper,
+                ),
             )
         ):
             gm.graph.erase_node(node)
@@ -574,8 +573,7 @@ def _replace_transpose_last_dims(gm: torch.fx.GraphModule):
         if node.op == "call_method" and node.target == "transpose":
             if len(node.args) != 3:
                 continue
-            changed = _replace_transpose_last_dims_impl(node)
-            if changed:
+            if changed := _replace_transpose_last_dims_impl(node):
                 gm.graph.eliminate_dead_code()
                 gm.graph.lint()
                 gm.recompile()

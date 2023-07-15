@@ -6,7 +6,7 @@ import sys
 # Use system installed Python packages
 PYT_PATH = (
     "/usr/local/lib/python3.10/dist-packages"
-    if not "PYT_PATH" in os.environ
+    if "PYT_PATH" not in os.environ
     else os.environ["PYT_PATH"]
 )
 print(f"Using python path {PYT_PATH}")
@@ -15,18 +15,20 @@ print(f"Using python path {PYT_PATH}")
 # TOP_DIR
 TOP_DIR = (
     os.path.dirname(os.path.realpath(__file__))
-    if not "TOP_DIR" in os.environ
+    if "TOP_DIR" not in os.environ
     else os.environ["TOP_DIR"]
 )
 print(f"Test root directory {TOP_DIR}")
 
 # Set the USE_CXX11=1 to use cxx11_abi
-USE_CXX11 = 0 if not "USE_CXX11" in os.environ else os.environ["USE_CXX11"]
+USE_CXX11 = 0 if "USE_CXX11" not in os.environ else os.environ["USE_CXX11"]
 if USE_CXX11:
     print("Using cxx11 abi")
 
 # Set the USE_HOST_DEPS=1 to use host dependencies for tests
-USE_HOST_DEPS = 0 if not "USE_HOST_DEPS" in os.environ else os.environ["USE_HOST_DEPS"]
+USE_HOST_DEPS = (
+    0 if "USE_HOST_DEPS" not in os.environ else os.environ["USE_HOST_DEPS"]
+)
 if USE_HOST_DEPS:
     print("Using dependencies from host python")
 
@@ -36,7 +38,7 @@ EPOCHS = 25
 SUPPORTED_PYTHON_VERSIONS = ["3.7", "3.8", "3.9", "3.10"]
 
 nox.options.sessions = [
-    "l0_api_tests-" + "{}.{}".format(sys.version_info.major, sys.version_info.minor)
+    f"l0_api_tests-{sys.version_info.major}.{sys.version_info.minor}"
 ]
 
 
@@ -92,7 +94,7 @@ def train_model(session):
         session.run_always(
             "python",
             "export_ckpt.py",
-            "vgg16_ckpts/ckpt_epoch" + str(EPOCHS) + ".pth",
+            f"vgg16_ckpts/ckpt_epoch{str(EPOCHS)}.pth",
             env={"PYTHONPATH": PYT_PATH},
         )
     else:
@@ -112,7 +114,9 @@ def train_model(session):
         )
 
         session.run_always(
-            "python", "export_ckpt.py", "vgg16_ckpts/ckpt_epoch" + str(EPOCHS) + ".pth"
+            "python",
+            "export_ckpt.py",
+            f"vgg16_ckpts/ckpt_epoch{str(EPOCHS)}.pth",
         )
 
 
@@ -146,7 +150,7 @@ def finetune_model(session):
         session.run_always(
             "python",
             "export_qat.py",
-            "vgg16_ckpts/ckpt_epoch" + str(EPOCHS + 1) + ".pth",
+            f"vgg16_ckpts/ckpt_epoch{str(EPOCHS + 1)}.pth",
             env={"PYTHONPATH": PYT_PATH},
         )
     else:
@@ -171,7 +175,7 @@ def finetune_model(session):
         session.run_always(
             "python",
             "export_qat.py",
-            "vgg16_ckpts/ckpt_epoch" + str(EPOCHS + 1) + ".pth",
+            f"vgg16_ckpts/ckpt_epoch{str(EPOCHS + 1)}.pth",
         )
 
 
@@ -185,8 +189,8 @@ def cleanup(session):
         "tests/py/*.jit.pt",
     ]
 
-    target = " ".join(x for x in [os.path.join(TOP_DIR, i) for i in target])
-    session.run_always("bash", "-c", str("rm -rf ") + target, external=True)
+    target = " ".join([os.path.join(TOP_DIR, i) for i in target])
+    session.run_always("bash", "-c", f"rm -rf {target}", external=True)
 
 
 def run_base_tests(session):
@@ -324,15 +328,13 @@ def copy_model(session):
     model_files = ["trained_vgg16.jit.pt", "trained_vgg16_qat.jit.pt"]
 
     for file_name in model_files:
-        src_file = os.path.join(
-            TOP_DIR, str("examples/int8/training/vgg16/") + file_name
-        )
+        src_file = os.path.join(TOP_DIR, f"examples/int8/training/vgg16/{file_name}")
         if os.path.exists(src_file):
             session.run_always(
                 "cp",
                 "-rpf",
                 os.path.join(TOP_DIR, src_file),
-                os.path.join(TOP_DIR, str("tests/modules/") + file_name),
+                os.path.join(TOP_DIR, f"tests/modules/{file_name}"),
                 external=True,
             )
 

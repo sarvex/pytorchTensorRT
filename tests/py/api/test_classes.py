@@ -57,7 +57,7 @@ class TestInput(unittest.TestCase):
     def _verify_correctness(self, struct: torchtrt.Input, target: Dict) -> bool:
         internal = struct._to_internal()
 
-        list_eq = lambda al, bl: all([a == b for (a, b) in zip(al, bl)])
+        list_eq = lambda al, bl: all(a == b for (a, b) in zip(al, bl))
 
         eq = lambda a, b: a == b
 
@@ -242,6 +242,9 @@ class TestInput(unittest.TestCase):
 class TestTorchTensorRTModule(unittest.TestCase):
     @staticmethod
     def _get_trt_mod():
+
+
+
         class Test(torch.nn.Module):
             def __init__(self):
                 super(Test, self).__init__()
@@ -249,8 +252,8 @@ class TestTorchTensorRTModule(unittest.TestCase):
                 self.fc2 = torch.nn.Linear(5, 5)
 
             def forward(self, x):
-                out = self.fc2(self.fc1(x))
-                return out
+                return self.fc2(self.fc1(x))
+
 
         mod = torch.jit.script(Test())
         test_mod_engine_str = torchtrt.ts.convert_method_to_trt_engine(
@@ -264,6 +267,9 @@ class TestTorchTensorRTModule(unittest.TestCase):
         )
 
     def test_detect_invalid_input_binding(self):
+
+
+
         class Test(torch.nn.Module):
             def __init__(self):
                 super(Test, self).__init__()
@@ -271,8 +277,8 @@ class TestTorchTensorRTModule(unittest.TestCase):
                 self.fc2 = torch.nn.Linear(5, 5)
 
             def forward(self, x):
-                out = self.fc2(self.fc1(x))
-                return out
+                return self.fc2(self.fc1(x))
+
 
         mod = torch.jit.script(Test())
         test_mod_engine_str = torchtrt.ts.convert_method_to_trt_engine(
@@ -287,6 +293,9 @@ class TestTorchTensorRTModule(unittest.TestCase):
             )
 
     def test_detect_invalid_output_binding(self):
+
+
+
         class Test(torch.nn.Module):
             def __init__(self):
                 super(Test, self).__init__()
@@ -294,8 +303,8 @@ class TestTorchTensorRTModule(unittest.TestCase):
                 self.fc2 = torch.nn.Linear(5, 5)
 
             def forward(self, x):
-                out = self.fc2(self.fc1(x))
-                return out
+                return self.fc2(self.fc1(x))
+
 
         mod = torch.jit.script(Test())
         test_mod_engine_str = torchtrt.ts.convert_method_to_trt_engine(

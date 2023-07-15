@@ -55,7 +55,7 @@ if "--legacy" in sys.argv:
     sys.argv.remove("--legacy")
 
 if "--release" not in sys.argv:
-    __version__ = __version__ + "+" + get_git_revision_short_hash()
+    __version__ = f"{__version__}+{get_git_revision_short_hash()}"
 else:
     RELEASE = True
     sys.argv.remove("--release")
@@ -119,13 +119,12 @@ if not FX_ONLY:
 
     if BAZEL_EXE is None:
         BAZEL_EXE = which("bazel")
-        if BAZEL_EXE is None:
-            sys.exit("Could not find bazel in PATH")
+    if BAZEL_EXE is None:
+        sys.exit("Could not find bazel in PATH")
 
 
 def build_libtorchtrt_pre_cxx11_abi(develop=True, use_dist_dir=True, cxx11_abi=False):
-    cmd = [BAZEL_EXE, "build"]
-    cmd.append("//:libtorchtrt")
+    cmd = [BAZEL_EXE, "build", "//:libtorchtrt"]
     if develop:
         cmd.append("--compilation_mode=dbg")
     else:
@@ -159,26 +158,26 @@ def build_libtorchtrt_pre_cxx11_abi(develop=True, use_dist_dir=True, cxx11_abi=F
 
 
 def gen_version_file():
-    if not os.path.exists(dir_path + "/torch_tensorrt/_version.py"):
-        os.mknod(dir_path + "/torch_tensorrt/_version.py")
+    if not os.path.exists(f"{dir_path}/torch_tensorrt/_version.py"):
+        os.mknod(f"{dir_path}/torch_tensorrt/_version.py")
 
-    with open(dir_path + "/torch_tensorrt/_version.py", "w") as f:
+    with open(f"{dir_path}/torch_tensorrt/_version.py", "w") as f:
         print("creating version file")
-        f.write('__version__ = "' + __version__ + '"\n')
-        f.write('__cuda_version__ = "' + __cuda_version__ + '"\n')
-        f.write('__cudnn_version__ = "' + __cudnn_version__ + '"\n')
-        f.write('__tensorrt_version__ = "' + __tensorrt_version__ + '"\n')
+        f.write(f'__version__ = "{__version__}' + '"\n')
+        f.write(f'__cuda_version__ = "{__cuda_version__}' + '"\n')
+        f.write(f'__cudnn_version__ = "{__cudnn_version__}' + '"\n')
+        f.write(f'__tensorrt_version__ = "{__tensorrt_version__}' + '"\n')
 
 
 def copy_libtorchtrt(multilinux=False):
-    if not os.path.exists(dir_path + "/torch_tensorrt/lib"):
-        os.makedirs(dir_path + "/torch_tensorrt/lib")
+    if not os.path.exists(f"{dir_path}/torch_tensorrt/lib"):
+        os.makedirs(f"{dir_path}/torch_tensorrt/lib")
 
     print("copying library into module")
     if multilinux:
         copyfile(
-            dir_path + "/build/libtrtorch_build/libtrtorch.so",
-            dir_path + "/trtorch/lib/libtrtorch.so",
+            f"{dir_path}/build/libtrtorch_build/libtrtorch.so",
+            f"{dir_path}/trtorch/lib/libtrtorch.so",
         )
     else:
         os.system(
@@ -200,13 +199,13 @@ class DevelopCommand(develop):
     def run(self):
         if FX_ONLY:
             gen_version_file()
-            develop.run(self)
         else:
             global CXX11_ABI
             build_libtorchtrt_pre_cxx11_abi(develop=True, cxx11_abi=CXX11_ABI)
             gen_version_file()
             copy_libtorchtrt()
-            develop.run(self)
+
+        develop.run(self)
 
 
 class InstallCommand(install):
@@ -221,13 +220,13 @@ class InstallCommand(install):
     def run(self):
         if FX_ONLY:
             gen_version_file()
-            install.run(self)
         else:
             global CXX11_ABI
             build_libtorchtrt_pre_cxx11_abi(develop=False, cxx11_abi=CXX11_ABI)
             gen_version_file()
             copy_libtorchtrt()
-            install.run(self)
+
+        install.run(self)
 
 
 class BdistCommand(bdist_wheel):
@@ -284,8 +283,8 @@ class CleanCommand(Command):
             for path in [str(p) for p in abs_paths]:
                 if not path.startswith(dir_path):
                     # Die if path in CLEAN_FILES is absolute + outside this directory
-                    raise ValueError("%s is not a path inside %s" % (path, dir_path))
-                print("Removing %s" % os.path.relpath(path))
+                    raise ValueError(f"{path} is not a path inside {dir_path}")
+                print(f"Removing {os.path.relpath(path)}")
                 rmtree(path)
 
         for path_spec in self.PY_CLEAN_FILES:
@@ -294,8 +293,8 @@ class CleanCommand(Command):
             for path in [str(p) for p in abs_paths]:
                 if not path.startswith(dir_path):
                     # Die if path in CLEAN_FILES is absolute + outside this directory
-                    raise ValueError("%s is not a path inside %s" % (path, dir_path))
-                print("Removing %s" % os.path.relpath(path))
+                    raise ValueError(f"{path} is not a path inside {dir_path}")
+                print(f"Removing {os.path.relpath(path)}")
                 os.remove(path)
 
 
@@ -309,18 +308,18 @@ ext_modules = [
             "torch_tensorrt/csrc/register_tensorrt_classes.cpp",
         ],
         library_dirs=[
-            (dir_path + "/torch_tensorrt/lib/"),
+            f"{dir_path}/torch_tensorrt/lib/",
             "/opt/conda/lib/python3.6/config-3.6m-x86_64-linux-gnu",
         ],
         libraries=["torchtrt"],
         include_dirs=[
-            dir_path + "torch_tensorrt/csrc",
-            dir_path + "torch_tensorrt/include",
-            dir_path + "/../bazel-TRTorch/external/tensorrt/include",
-            dir_path + "/../bazel-Torch-TensorRT/external/tensorrt/include",
-            dir_path + "/../bazel-TensorRT/external/tensorrt/include",
-            dir_path + "/../bazel-tensorrt/external/tensorrt/include",
-            dir_path + "/../",
+            f"{dir_path}torch_tensorrt/csrc",
+            f"{dir_path}torch_tensorrt/include",
+            f"{dir_path}/../bazel-TRTorch/external/tensorrt/include",
+            f"{dir_path}/../bazel-Torch-TensorRT/external/tensorrt/include",
+            f"{dir_path}/../bazel-TensorRT/external/tensorrt/include",
+            f"{dir_path}/../bazel-tensorrt/external/tensorrt/include",
+            f"{dir_path}/../",
         ],
         extra_compile_args=[
             "-Wno-deprecated",

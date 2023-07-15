@@ -6,19 +6,12 @@ import utils
 
 
 def lint(target_files, color=True):
-    failure = False
     cmd = ["black", "--diff"]
-    if color:
-        cmd += ["--color"]
-    else:
-        cmd += ["--no-color"]
+    cmd += ["--color"] if color else ["--no-color"]
     cmd += target_files
     output = subprocess.run(cmd)
 
-    if output.returncode != 0:
-        failure = True
-
-    return failure
+    return output.returncode != 0
 
 
 if __name__ == "__main__":
@@ -31,7 +24,8 @@ if __name__ == "__main__":
     projects = utils.CHECK_PROJECTS(sys.argv[1:])
     if "//..." in projects:
         projects = [
-            p.replace(BAZEL_ROOT, "/")[:-1] for p in glob.glob(BAZEL_ROOT + "/*/")
+            p.replace(BAZEL_ROOT, "/")[:-1]
+            for p in glob.glob(f"{BAZEL_ROOT}/*/")
         ]
         projects = [p for p in projects if p not in utils.BLACKLISTED_BAZEL_TARGETS]
 
@@ -39,7 +33,7 @@ if __name__ == "__main__":
     for p in projects:
         if p.endswith("/..."):
             p = p[:-4]
-        path = BAZEL_ROOT + "/" + p[2:]
+        path = f"{BAZEL_ROOT}/{p[2:]}"
         files = utils.glob_files(path, utils.VALID_PY_FILE_TYPES)
         if files != []:
             if lint(files, color):

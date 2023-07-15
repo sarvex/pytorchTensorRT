@@ -40,7 +40,7 @@ def replace_inplace_ops(
         torch.ops.aten.add_.Tensor: torch.ops.aten.add.Tensor,
     }
     for n in module.graph.nodes:
-        if n.op == "call_function" and n.target in map_func.keys():
+        if n.op == "call_function" and n.target in map_func:
             modified = True
             node = n
             with module.graph.inserting_after(node):
@@ -68,19 +68,18 @@ def replace_native_layernorm_with_layernorm(
             and n.target == torch.ops.aten.native_layer_norm.default
         ):
             for v in n.users:
-                if v.op == "call_function" and v.target == operator.getitem:
-                    if v.args[1] != 0:
-                        raise RuntimeError(
-                            f"Got args[{v.args[1]}]!!\n"
-                            "layernorm can only generate output (args[0]), "
-                            "not mean (args[1]) or std (args[2])!"
-                        )
-                    new_op = torch.ops.aten.layer_norm.default
-                    new_args = (*n.args, True)  # cudnn_enable=True
-                    modified = True
-                else:
+                if v.op != "call_function" or v.target != operator.getitem:
                     continue
 
+                if v.args[1] != 0:
+                    raise RuntimeError(
+                        f"Got args[{v.args[1]}]!!\n"
+                        "layernorm can only generate output (args[0]), "
+                        "not mean (args[1]) or std (args[2])!"
+                    )
+                new_op = torch.ops.aten.layer_norm.default
+                new_args = (*n.args, True)  # cudnn_enable=True
+                modified = True
                 with module.graph.inserting_after(v):
                     new_node = module.graph.create_node(
                         "call_function",
@@ -178,10 +177,10 @@ def replace_aten_op_with_indices(module: torch.fx.GraphModule) -> torch.fx.Graph
             elif n.target == torch.ops.aten.max_pool3d_with_indices.default:
                 new_op = torch.ops.aten.max_pool3d
                 new_args = n.args
-            elif (
-                n.target == torch.ops.aten.native_batch_norm.default
-                or n.target == torch.ops.aten._native_batch_norm_legit.default
-            ):
+            elif n.target in [
+                torch.ops.aten.native_batch_norm.default,
+                torch.ops.aten._native_batch_norm_legit.default,
+            ]:
                 new_op = torch.ops.aten.batch_norm
                 new_args = list(n.args)
                 new_args.append(False)
@@ -310,7 +309,7 @@ For ex:
 
 
 def aten_compose_getitem_slice(input, list_args):
-    for _, args in enumerate(list_args):
+    for args in list_args:
         input = torch.ops.aten.slice.Tensor(input, *args)
     return input
 
@@ -333,10 +332,7 @@ def compose_getitem_slice(
             ):
                 node = next(iter(node.users))
                 holder.append(node)
-            if len(holder) == 1:
-                return (False,)
-            else:
-                return (True, holder)
+            return (False, ) if len(holder) == 1 else (True, holder)
         return (False,)
 
     modified = False
@@ -380,8 +376,7 @@ def aten_compose_bmm_2d(flat_args_1, flat_args_2):
     )
     view_1 = torch.ops.aten.view.default(expand_1, [sym_size, sym_size_3, sym_size_4])
     bmm = torch.ops.aten.bmm.default(view, view_1)
-    view_2 = torch.ops.aten.view.default(bmm, [sym_size, sym_size_1, sym_size_4])
-    return view_2
+    return torch.ops.aten.view.default(bmm, [sym_size, sym_size_1, sym_size_4])
 
 
 def aten_compose_bmm_3d(flat_args_1, flat_args_2):
@@ -399,8 +394,7 @@ def aten_compose_bmm_3d(flat_args_1, flat_args_2):
     )
     view_1 = torch.ops.aten.view.default(expand_1, [sym_size, sym_size_3, sym_size_4])
     bmm = torch.ops.aten.bmm.default(view, view_1)
-    view_2 = torch.ops.aten.view.default(bmm, [sym_size, sym_size_1, sym_size_4])
-    return view_2
+    return torch.ops.aten.view.default(bmm, [sym_size, sym_size_1, sym_size_4])
 
 
 def compose_bmm(
@@ -472,38 +466,33 @@ def compose_chunk(
     """
 
     def match_pattern(module, node):
-        if node.op == "call_function" and node.target in (torch.ops.aten.split.Tensor,):
-            div = node.args[1]
-            input = node.args[0]
-            if isinstance(div, int):
-                return (False,)
-            if div.target != operator.floordiv:
-                return (False,)
-            else:
-                div_const = div.args[1]
-                sub = div.args[0]
-                if sub.target != operator.sub:
-                    return (False,)
-                else:
-                    add = sub.args[0]
-                    if add.target != operator.add:
-                        return (False,)
-                    else:
-                        add_const = add.args[1]
-                        if add_const != div_const:
-                            return (False,)
-                        symsize = add.args[0]
-                        if symsize.target != torch.ops.aten.sym_size:
-                            return (False,)
-                        else:
-                            symsize_input = symsize.args[0]
-                            dim = symsize.args[1]
-                            if symsize_input != input:
-                                return (False,)
-
-            return (True, div_const, dim)
-        else:
+        if node.op != "call_function" or node.target not in (
+            torch.ops.aten.split.Tensor,
+        ):
             return (False,)
+
+        div = node.args[1]
+        input = node.args[0]
+        if isinstance(div, int):
+            return (False,)
+        if div.target != operator.floordiv:
+            return (False,)
+        div_const = div.args[1]
+        sub = div.args[0]
+        if sub.target != operator.sub:
+            return (False,)
+        add = sub.args[0]
+        if add.target != operator.add:
+            return (False,)
+        add_const = add.args[1]
+        if add_const != div_const:
+            return (False,)
+        symsize = add.args[0]
+        if symsize.target != torch.ops.aten.sym_size:
+            return (False,)
+        symsize_input = symsize.args[0]
+        dim = symsize.args[1]
+        return (False, ) if symsize_input != input else (True, div_const, dim)
 
     modified = False
     for node in module.graph.nodes:

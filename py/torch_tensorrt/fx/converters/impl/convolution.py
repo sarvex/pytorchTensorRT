@@ -51,7 +51,7 @@ def convNd(
             "dim": -1,
         }
         input_val = acc_ops_converters.acc_ops_unsqueeze(
-            network, target, tuple(), kwargs, name + "_unsqueeze"
+            network, target, tuple(), kwargs, f"{name}_unsqueeze"
         )
 
     # Process bias terms
@@ -77,7 +77,7 @@ def convNd(
                 "dim": -1,
             }
             weight = acc_ops_converters.acc_ops_unsqueeze(
-                network, target, tuple(), kwargs, name + "_unsqueeze_weight"
+                network, target, tuple(), kwargs, f"{name}_unsqueeze_weight"
             )
 
     elif isinstance(weight, torch.Tensor):
@@ -139,7 +139,7 @@ def convNd(
             "dim": -1,
         }
         result = acc_ops_converters.acc_ops_squeeze(
-            network, target, tuple(), kwargs, name + "_squeeze"
+            network, target, tuple(), kwargs, f"{name}_squeeze"
         )
 
     return result

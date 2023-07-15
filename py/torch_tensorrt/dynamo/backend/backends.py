@@ -73,21 +73,13 @@ def _pretraced_backend(
     try:
         logger.debug("Post-AOT Autograd graph:\n" + str(gm.graph))
 
-        trt_compiled = _compile_module(
+        return _compile_module(
             gm,
             sample_inputs,
             settings=settings,
         )
-        return trt_compiled
     except:
-        if not settings.pass_through_build_failures:
-            logger.warning(
-                "TRT conversion failed on the subgraph. See trace above. "
-                + "Returning GraphModule forward instead.",
-                exc_info=True,
-            )
-            return gm.forward
-        else:
+        if settings.pass_through_build_failures:
             raise AssertionError(
                 "Halting compilation on build failure since "
                 + "pass_through_build_failures was specified as True. "
@@ -95,6 +87,12 @@ def _pretraced_backend(
                 + "halting compilation on engine build failures, "
                 + "specify pass_through_build_failures=False."
             )
+        logger.warning(
+            "TRT conversion failed on the subgraph. See trace above. "
+            + "Returning GraphModule forward instead.",
+            exc_info=True,
+        )
+        return gm.forward
 
 
 def _compile_module(

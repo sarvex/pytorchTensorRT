@@ -257,11 +257,11 @@ def validate_variable_batch_sizes(run_alternative_batch_size: int = -1) -> "Deco
 
         @wraps(pass_)
         def pass_with_validation(
-            module: fx.GraphModule,
-            input: Input,
-            *args,
-            **kwargs,
-        ) -> fx.GraphModule:
+                    module: fx.GraphModule,
+                    input: Input,
+                    *args,
+                    **kwargs,
+                ) -> fx.GraphModule:
             _run_alternative_batch_size = (
                 ALTERNATIVE_BATCH_SIZE_OVERRIDE
                 if ALTERNATIVE_BATCH_SIZE_OVERRIDE is not None
@@ -283,7 +283,7 @@ def validate_variable_batch_sizes(run_alternative_batch_size: int = -1) -> "Deco
                 )
                 return pass_(module, input, *args, **kwargs)
 
-            if not all(len(x.shape) > 0 for x in input):
+            if any(len(x.shape) <= 0 for x in input):
                 _LOGGER.info(
                     "Skip run_alternative_batch_size: some input tensor(s) are scalar"
                 )
@@ -471,8 +471,7 @@ class InputOutputDtypeInferInterpreter(torch.fx.Interpreter):
                 f"Encountered node: {node.format_node()} need dtype cast to float32."
             )
             self.need_cast_to_float32.append(node)
-        # Process node that will be used as final output
-        elif "output" in set(i.name for i in node.users.keys()):
+        elif "output" in {i.name for i in node.users.keys()}:
             if run_result.dtype not in (torch.int32, torch.int64):
                 _LOGGER.info(
                     f"Encountered node: {node.format_node()} need dtype cast to bfloat16."

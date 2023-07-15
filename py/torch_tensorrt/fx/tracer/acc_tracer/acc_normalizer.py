@@ -152,9 +152,10 @@ def _get_dup_signature_tuples(fn: Callable) -> List[Tuple[str, str]]:
     Helper that inspects the arg signature of `fn` and returns a list of tuples, where
     each tuple is a pair of duplicated names which is used for arg_replacement_tuples.
     """
-    sig_tuples: List[Tuple[str, str]] = []
-    for param in inspect.signature(inspect.unwrap(fn)).parameters:
-        sig_tuples.append((param, param))
+    sig_tuples: List[Tuple[str, str]] = [
+        (param, param)
+        for param in inspect.signature(inspect.unwrap(fn)).parameters
+    ]
     return sig_tuples
 
 
@@ -327,9 +328,7 @@ def get_normalized_kwargs(
     if final_arg_is_varg:
         var_arg_idx = len(arg_replacement_tuples) - 1
         new_kwarg_name = arg_replacement_tuples[var_arg_idx][1]
-        rest_of_args = []
-        for i in range(var_arg_idx, len(node.args)):
-            rest_of_args.append(node.args[i])
+        rest_of_args = [node.args[i] for i in range(var_arg_idx, len(node.args))]
         new_kwargs[new_kwarg_name] = rest_of_args
 
     return new_kwargs

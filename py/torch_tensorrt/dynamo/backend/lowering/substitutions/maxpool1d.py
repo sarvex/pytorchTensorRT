@@ -77,8 +77,7 @@ def maxpool1d_insertion_fn(
     node: torch.fx.Node,
     submodule: torch.nn.Module,
 ) -> torch.fx.Node:
-    # Defines insertion function for new node
-    new_node = gm.graph.call_function(
+    return gm.graph.call_function(
         torch.ops.tensorrt.maxpool1d,
         args=node.args,
         kwargs={
@@ -89,8 +88,6 @@ def maxpool1d_insertion_fn(
             "ceil_mode": submodule.ceil_mode,
         },
     )
-
-    return new_node
 
 
 # 4. The Accelerated Implementation

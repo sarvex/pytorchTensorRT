@@ -56,24 +56,30 @@ class Fx2trtLowerTests(unittest.TestCase):
         lower(TestModule(), [torch.randn([2, 2])])
 
     def test_replace_mutable_op(self):
+
+
+
         class TestModule(torch.nn.Module):
             def forward(self, x, y):
                 xf = x.fill_(100)
                 yf = y.fill_(200)
-                c = torch.cat([xf, yf], dim=1)
-                return c
+                return torch.cat([xf, yf], dim=1)
+
 
         lower = Lowerer.create(LowerSetting())
         mod_traced = fx.symbolic_trace(TestModule())
         lower(mod_traced, [torch.randn(3, 4), torch.randn(3, 4)])
 
     def test_replace_mutable_op_dont_apply(self):
+
+
+
         class TestModule(torch.nn.Module):
             def forward(self, x):
                 s = x + 1
                 t = s.fill_(5)
-                p = s + t
-                return p
+                return s + t
+
 
         mod_traced = fx.symbolic_trace(TestModule())
         old_code = mod_traced.code
@@ -86,12 +92,15 @@ class Fx2trtLowerTests(unittest.TestCase):
         self.assertEqual(old_code, new_code)
 
     def test_replace_mutable_op_do_apply(self):
+
+
+
         class TestModule(torch.nn.Module):
             def forward(self, x):
                 s = x + 1
                 t = s.fill_(5)  # s not used afterwards
-                p = x + t
-                return p
+                return x + t
+
 
         mod_traced = fx.symbolic_trace(TestModule())
         old_code = mod_traced.code

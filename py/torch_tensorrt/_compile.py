@@ -42,10 +42,14 @@ def _parse_module_type(module: Any) -> _ModuleType:
 
 
 def _get_target_ir(module_type: _ModuleType, ir: str) -> _IRType:
-    module_is_tsable = any([module_type == t for t in [_ModuleType.nn, _ModuleType.ts]])
-    module_is_fxable = any([module_type == t for t in [_ModuleType.nn, _ModuleType.fx]])
+    module_is_tsable = any(
+        module_type == t for t in [_ModuleType.nn, _ModuleType.ts]
+    )
+    module_is_fxable = any(
+        module_type == t for t in [_ModuleType.nn, _ModuleType.fx]
+    )
 
-    ir_targets_torchscript = any([ir == opt for opt in ["torchscript", "ts"]])
+    ir_targets_torchscript = any(ir == opt for opt in ["torchscript", "ts"])
     ir_targets_fx = ir == "fx"
     ir_targets_dynamo_compile = ir == "dynamo_compile"
     ir_targets_fx_ts_compat = ir == "fx_ts_compat"
@@ -59,23 +63,22 @@ def _get_target_ir(module_type: _ModuleType, ir: str) -> _IRType:
     elif module_is_fxable and ir_targets_dynamo_compile:
         return _IRType.dynamo_compile
     else:
-        if ir == "default":
-            # Options are listed in order of preference
-            if module_is_tsable:
-                logging.log(
-                    logging.Level.Info, "ir was set to default, using TorchScript as ir"
-                )
-                return _IRType.ts
-            elif module_is_fxable:
-                raise ValueError(
-                    "Was given a torch.fx.GraphModule, fx is not currently supported by Torch-TensorRT"
-                )
-                # logging.log(logging.Level.Info, "ir was set to default, using TorchScript as fx")
-                # return _IRType.fx
-            else:
-                raise ValueError("Module was provided with in an unsupported format")
-        else:
+        if ir != "default":
             raise ValueError("Unknown ir was requested")
+        # Options are listed in order of preference
+        if module_is_tsable:
+            logging.log(
+                logging.Level.Info, "ir was set to default, using TorchScript as ir"
+            )
+            return _IRType.ts
+        elif module_is_fxable:
+            raise ValueError(
+                "Was given a torch.fx.GraphModule, fx is not currently supported by Torch-TensorRT"
+            )
+            # logging.log(logging.Level.Info, "ir was set to default, using TorchScript as fx")
+            # return _IRType.fx
+        else:
+            raise ValueError("Module was provided with in an unsupported format")
 
 
 def compile(

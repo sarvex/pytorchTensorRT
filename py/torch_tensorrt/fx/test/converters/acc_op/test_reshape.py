@@ -102,14 +102,17 @@ class TestReshapeConverter(AccTestCase):
         )
 
     def test_reshape_with_dynamic_shape_mul(self):
+
+
+
         class TestModule(torch.nn.Module):
             def forward(self, x, y, z):
                 t = 8000
                 a = torch.reshape(x, [-1, t, 64])
                 b = torch.reshape(y, [-1, t, 64])
                 c = torch.reshape(z, [-1, t, 64])
-                d = a + b + c
-                return d
+                return a + b + c
+
 
         input_specs = [
             InputTensorSpec(

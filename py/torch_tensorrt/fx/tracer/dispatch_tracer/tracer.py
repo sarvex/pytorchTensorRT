@@ -47,7 +47,8 @@ def build_outputs(func, func_overload, args, kwargs, proxy_out, call_module=Fals
 
     if isinstance(real_out, tuple):
         return tuple(
-            [wrap_with_proxy(e, proxy_out[idx]) for idx, e in enumerate(real_out)]
+            wrap_with_proxy(e, proxy_out[idx])
+            for idx, e in enumerate(real_out)
         )
     elif isinstance(real_out, list):
         return [wrap_with_proxy(e, proxy_out[idx]) for idx, e in enumerate(real_out)]
@@ -149,22 +150,22 @@ class DispatchTracer(Tracer):
         return attr_val
 
     def create_arg(self, a: Any):
-        if isinstance(a, torch.nn.Parameter):
-            for n, p in self.root.named_parameters():
-                if a is p:
-                    return self.create_node("get_attr", n, (), {})
-            qualname: Optional[str] = None
+        if not isinstance(a, torch.nn.Parameter):
+            return super().create_arg(a)
+        for n, p in self.root.named_parameters():
+            if a is p:
+                return self.create_node("get_attr", n, (), {})
+        qualname: Optional[str] = None
 
-            i = 0
-            while True:
-                qualname = f"_param_constant{i}"
-                if not hasattr(self.root, qualname):
-                    break
-                i += 1
-            setattr(self.root, qualname, a)
+        i = 0
+        while True:
+            qualname = f"_param_constant{i}"
+            if not hasattr(self.root, qualname):
+                break
+            i += 1
+        setattr(self.root, qualname, a)
 
-            return self.create_node("get_attr", qualname, (), {})
-        return super().create_arg(a)
+        return self.create_node("get_attr", qualname, (), {})
 
 
 def dispatch_trace(

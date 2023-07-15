@@ -82,9 +82,7 @@ def flatten(*, input, start_dim=0, end_dim=-1):
 )
 @register_acc_op
 def squeeze(*, input, dim=None):
-    if dim is None:
-        return input.squeeze()
-    return input.squeeze(dim=dim)
+    return input.squeeze() if dim is None else input.squeeze(dim=dim)
 
 
 @register_acc_op_mapping(op_and_target=("call_function", nn.functional.embedding))
@@ -383,15 +381,17 @@ def custom_getattr_mapper(node: torch.fx.Node, _: nn.Module) -> torch.fx.Node:
         torch.Tensor,
         torch.nn.parameter.Parameter,
     ], f"Expected torch.Tensor type for {input_obj_type}"
-    assert (
-        attr_name == "shape" or attr_name == "device" or attr_name == "dtype"
-    ), f"Only supporting shape, device and dtype getattr for now, not {attr_name}"
-    if attr_name == "shape":
-        func = size
-    elif attr_name == "device":
+    assert attr_name in [
+        "shape",
+        "device",
+        "dtype",
+    ], f"Only supporting shape, device and dtype getattr for now, not {attr_name}"
+    if attr_name == "device":
         func = device
     elif attr_name == "dtype":
         func = dtype
+    elif attr_name == "shape":
+        func = size
     with node.graph.inserting_before(node):
         size_node = node.graph.call_function(func, kwargs={"input": input_obj})
         size_node.meta = node.meta.copy()
@@ -516,7 +516,7 @@ def repeat_interleave_mapper(node: torch.fx.Node, _: nn.Module):
     input_node = node.kwargs["input"]
     repeats = cast(int, node.kwargs["repeats"])
     dim = node.kwargs["dim"]
-    if not (type(repeats) is int):
+    if type(repeats) is not int:
         logger.info(
             "Not mapping repeat_interleave to an acc op. We currently only support `repeat_interleave` with int repeats"
         )
@@ -545,10 +545,7 @@ def repeat_interleave_mapper(node: torch.fx.Node, _: nn.Module):
         )
         new_shape = []
         if dim is not None:
-            if dim < 0:
-                repeat_dim = dim + rank
-            else:
-                repeat_dim = dim
+            repeat_dim = dim + rank if dim < 0 else dim
             size_node = node.graph.create_node(
                 "call_function",
                 size,
@@ -2509,9 +2506,7 @@ def slice_tensor(*, input, dim, start, stop, step):
         slices: List[slice] = [slice(None, None, None) for _ in range(dim)]
         slices.append(slc)
     else:
-        slices = [Ellipsis, slc]  # type: ignore[list-item]
-        slices.extend([slice(None, None, None) for _ in range(-dim - 1)])
-
+        slices = [Ellipsis, slc, *[slice(None, None, None) for _ in range(-dim - 1)]]
     return input[tuple(slices)]
 
 
@@ -2713,13 +2708,9 @@ def custom_tensor_to_mapper(node: torch.fx.Node, _: nn.Module):
             raise RuntimeError(f"We currently do not support to({meta_type})")
     elif isinstance(dest, torch.device):
         # only device is set, dtype=None
-        if dest_other is None:
-            dest_device = dest
-        # device and dtype are both set
-        else:
+        if dest_other is not None:
             dest_dtype = dest_other
-            dest_device = dest
-    # only dtype is set
+        dest_device = dest
     else:
         dest_dtype = dest
 
@@ -2764,7 +2755,7 @@ def custom_torch_add_mapper(node: torch.fx.Node, mod: nn.Module) -> torch.fx.Nod
                         "input": node.kwargs["other"],
                         "other": node.kwargs["alpha"],
                     },
-                    name=node.name + "_mul_alpha",
+                    name=f"{node.name}_mul_alpha",
                 )
                 other_node.meta = node.meta
             else:

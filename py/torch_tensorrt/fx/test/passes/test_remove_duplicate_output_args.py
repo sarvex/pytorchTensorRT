@@ -15,6 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class TestFx2TrtPasses(TestCase):
     def test_remove_duplicate_output_args(self):
+
         class Sub(nn.Module):
             def forward(self, x):
                 return (x, x)
@@ -28,11 +29,12 @@ class TestFx2TrtPasses(TestCase):
                 a_res = self.a(x)
                 return a_res[0] + a_res[1]
 
+
+
         class Tracer(fx.Tracer):
             def is_leaf_module(self, m, qn):
-                if isinstance(m, Sub):  # don't trace into
-                    return True
-                return False
+                return isinstance(m, Sub)
+
 
         top = Top()
         ttop = fx.GraphModule(top, Tracer().trace(top), "top")

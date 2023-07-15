@@ -81,9 +81,9 @@ class Input(object):
             self.shape = tuple(args[0])
             self.shape_mode = Input._ShapeMode.STATIC
 
-        elif len(args) == 0:
-            if not ("shape" in kwargs) and not (
-                all(k in kwargs for k in ["min_shape", "opt_shape", "max_shape"])
+        elif not args:
+            if "shape" not in kwargs and any(
+                k not in kwargs for k in ["min_shape", "opt_shape", "max_shape"]
             ):
                 raise ValueError(
                     "Missing required arguments for class Input\nEither shape or all three of min_shape, opt_shape, max_shape must be defined"
@@ -132,9 +132,7 @@ class Input(object):
 
         else:
             raise ValueError(
-                "Unexpected number of positional arguments for class Input \n    Found {} arguments, expected either zero or a single positional arguments".format(
-                    len(args)
-                )
+                f"Unexpected number of positional arguments for class Input \n    Found {len(args)} arguments, expected either zero or a single positional arguments"
             )
 
         if "dtype" in kwargs:
@@ -148,45 +146,20 @@ class Input(object):
         if "format" in kwargs:
             self.format = Input._parse_format(kwargs["format"])
 
-        if "tensor_domain" in kwargs:
-            domain = kwargs["tensor_domain"]
-        else:
-            domain = None
-
+        domain = kwargs.get("tensor_domain", None)
         self.tensor_domain = Input._parse_tensor_domain(domain)
 
     def __str__(self) -> str:
         if self.shape_mode == Input._ShapeMode.STATIC:
-            return "Input(shape={}, dtype={}, format={}, domain=[{}, {}))".format(
-                self.shape,
-                str(self.dtype),
-                str(self.format),
-                str(self.tensor_domain[0]),
-                str(self.tensor_domain[1]),
-            )
+            return f"Input(shape={self.shape}, dtype={str(self.dtype)}, format={str(self.format)}, domain=[{str(self.tensor_domain[0])}, {str(self.tensor_domain[1])}))"
         elif self.shape_mode == Input._ShapeMode.DYNAMIC:
-            return "Input(min_shape={}, opt_shape={}, max_shape={}, dtype={}, format={}, domain=[{}, {}))".format(
-                self.shape["min_shape"],
-                self.shape["opt_shape"],
-                self.shape["max_shape"],
-                str(self.dtype),
-                str(self.format),
-                str(self.tensor_domain[0]),
-                str(self.tensor_domain[1]),
-            )
+            return f'Input(min_shape={self.shape["min_shape"]}, opt_shape={self.shape["opt_shape"]}, max_shape={self.shape["max_shape"]}, dtype={str(self.dtype)}, format={str(self.format)}, domain=[{str(self.tensor_domain[0])}, {str(self.tensor_domain[1])}))'
         else:
             raise RuntimeError("Unknown input shape mode")
 
     @staticmethod
     def _supported_input_size_type(input_size: Any) -> bool:
-        if isinstance(input_size, torch.Size):
-            return True
-        elif isinstance(input_size, tuple):
-            return True
-        elif isinstance(input_size, list):
-            return True
-        else:
-            return False
+        return isinstance(input_size, (torch.Size, tuple, list))
 
     @staticmethod
     def _parse_dtype(dtype: Any) -> _enums.dtype:
@@ -275,10 +248,9 @@ class Input(object):
         elif len(domain) == 2:
             domain_lo, domain_hi = domain
 
-            # Validate type and provided values for domain
-            valid_type_lo = isinstance(domain_lo, int) or isinstance(domain_lo, float)
-            valid_type_hi = isinstance(domain_hi, int) or isinstance(domain_hi, float)
+            valid_type_hi = isinstance(domain_hi, (int, float))
 
+            valid_type_lo = isinstance(domain_lo, (int, float))
             if not valid_type_lo:
                 raise ValueError(
                     f"Expected value for tensor domain low specifier, got {domain_lo}"
@@ -290,8 +262,7 @@ class Input(object):
 
             if domain_hi <= domain_lo:
                 raise ValueError(
-                    "Expected provided integer range to have low tensor domain value "
-                    + f"< high tensor domain value, got invalid range [{domain_lo}, {domain_hi})"
+                    f"Expected provided integer range to have low tensor domain value < high tensor domain value, got invalid range [{domain_lo}, {domain_hi})"
                 )
             result_domain = (float(domain_lo), float(domain_hi))
         else:
@@ -357,23 +328,18 @@ class Input(object):
         if optimization_profile_field is not None:
             try:
                 assert any(
-                    [
-                        optimization_profile_field == field_name
-                        for field_name in ["min_shape", "opt_shape", "max_shape"]
-                    ]
+                    optimization_profile_field == field_name
+                    for field_name in ["min_shape", "opt_shape", "max_shape"]
                 )
             except:
                 raise ValueError(
                     "Invalid field name, expected one of min_shape, opt_shape, max_shape"
                 )
 
-        if (
-            optimization_profile_field is not None
-            and self.shape_mode == Input._ShapeMode.STATIC
-        ):
-            raise ValueError(
-                "Specified a optimization profile field but the input is static"
-            )
+            if self.shape_mode == Input._ShapeMode.STATIC:
+                raise ValueError(
+                    "Specified a optimization profile field but the input is static"
+                )
 
         if (
             optimization_profile_field is None

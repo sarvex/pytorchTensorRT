@@ -24,6 +24,9 @@ class TestPartitioning(TestCase):
         )
 
     def test_partition_fully_supported_multi_op(self):
+
+
+
         class FullySupportedMultiOp(torch.nn.Module):
             def __init__(self, *args, **kwargs) -> None:
                 super().__init__(*args, **kwargs)
@@ -32,8 +35,8 @@ class TestPartitioning(TestCase):
                 sum_ = torch.ops.aten.sub.Tensor(x, y)
                 concat_ = torch.ops.aten.cat.default(x, sum_)
                 relu_ = torch.ops.aten.relu.default(concat_)
-                pow_ = torch.ops.aten.pow.Tensor_Scalar(relu_, 2)
-                return pow_
+                return torch.ops.aten.pow.Tensor_Scalar(relu_, 2)
+
 
         fx_graph = torch.fx.symbolic_trace(FullySupportedMultiOp())
         partitioned_graph = partition(deepcopy(fx_graph), min_block_size=2)
@@ -44,6 +47,9 @@ class TestPartitioning(TestCase):
         )
 
     def test_partition_partially_supported_multi_op(self):
+
+
+
         class PartiallySupportedMultiOp(torch.nn.Module):
             def __init__(self, *args, **kwargs) -> None:
                 super().__init__(*args, **kwargs)
@@ -53,8 +59,8 @@ class TestPartitioning(TestCase):
                 sum_2 = torch.ops.aten.add.Tensor(x, sum_1)
                 sum_ = np.sum(sum_1) + np.sum(sum_2)
                 relu_ = torch.ops.aten.relu.default(sum_)
-                pow_ = torch.ops.aten.pow.Tensor_Scalar(relu_, 2)
-                return pow_
+                return torch.ops.aten.pow.Tensor_Scalar(relu_, 2)
+
 
         fx_graph = torch.fx.symbolic_trace(PartiallySupportedMultiOp())
         partitioned_graph = partition(deepcopy(fx_graph), min_block_size=2)
@@ -65,6 +71,9 @@ class TestPartitioning(TestCase):
         )
 
     def test_partition_partially_supported_with_torch_executed_ops(self):
+
+
+
         class PartiallySupportedMultiOp(torch.nn.Module):
             def __init__(self, *args, **kwargs) -> None:
                 super().__init__(*args, **kwargs)
@@ -74,8 +83,8 @@ class TestPartitioning(TestCase):
                 sum_2 = torch.ops.aten.add.Tensor(x, sum_1)
                 sum_ = torch.ops.aten.add.Tensor(sum_1, sum_2)
                 relu_ = torch.ops.aten.relu.default(sum_)
-                pow_ = torch.ops.aten.pow.Tensor_Scalar(relu_, 2)
-                return pow_
+                return torch.ops.aten.pow.Tensor_Scalar(relu_, 2)
+
 
         unexpected_ops = {torch.ops.aten.add.Tensor}
 

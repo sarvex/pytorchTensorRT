@@ -6,6 +6,7 @@ from torch_tensorrt.dynamo import compile
 
 class TestFakeTensors(TestCase):
     def test_lowering_mul_int(self):
+
         class MulInt(torch.nn.Module):
             def forward(self, x):
                 return x * 7
@@ -52,11 +53,12 @@ class TestFakeTensors(TestCase):
         self.assertAlmostEqual(
             max_diff,
             0,
-            msg=f"MulInt TRT outputs don't match with the original model.",
+            msg="MulInt TRT outputs don't match with the original model.",
         )
         torch._dynamo.reset()
 
     def test_lowering_add_float(self):
+
         class AddFloat(torch.nn.Module):
             def forward(self, x):
                 return x + 84.0
@@ -104,7 +106,7 @@ class TestFakeTensors(TestCase):
         self.assertAlmostEqual(
             max_diff,
             0,
-            msg=f"AddFloat TRT outputs don't match with the original model.",
+            msg="AddFloat TRT outputs don't match with the original model.",
         )
 
         torch._dynamo.reset()

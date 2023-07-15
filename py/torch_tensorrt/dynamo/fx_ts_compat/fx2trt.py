@@ -59,8 +59,7 @@ class TRTInterpreter(torch.fx.Interpreter):
 
         self.network = self.builder.create_network(flag)
 
-        missing_ops = self.validate_conversion()
-        if missing_ops:
+        if missing_ops := self.validate_conversion():
             warnings.warn(
                 "Interpretation will fail due to missing operations \n"
                 + "\n".join(f"{i}" for i in missing_ops)
@@ -75,7 +74,7 @@ class TRTInterpreter(torch.fx.Interpreter):
         self._output_names: List[str] = []
         self._itensor_to_tensor_meta: Dict[
             trt.tensorrt.ITensor, TensorMetadata
-        ] = dict()
+        ] = {}
 
         # Data types for TRT Module output Tensors
         self.output_dtypes = output_dtypes
@@ -242,7 +241,7 @@ class TRTInterpreter(torch.fx.Interpreter):
                 _LOGGER.info(f"Setting max aux streams to {max_aux_streams}")
                 builder_config.max_aux_streams = max_aux_streams
             if version_compatible:
-                _LOGGER.info(f"Using version compatible")
+                _LOGGER.info("Using version compatible")
                 builder_config.set_flag(trt.BuilderFlag.VERSION_COMPATIBLE)
             if optimization_level is not None:
                 _LOGGER.info(f"Using optimization level {optimization_level}")
@@ -386,24 +385,23 @@ class TRTInterpreter(torch.fx.Interpreter):
             )
 
         for i, output in enumerate(outputs):
-            if any(
-                op_name in output.name.split("_")
-                for op_name in (
-                    "eq",
-                    "gt",
-                    "lt",
-                    "or",
-                    "xor",
-                    "and",
-                    "not",
-                    "ne",
-                    "isinf",
-                    "any",
+            output_bool = any(
+                (
+                    op_name in output.name.split("_")
+                    for op_name in (
+                        "eq",
+                        "gt",
+                        "lt",
+                        "or",
+                        "xor",
+                        "and",
+                        "not",
+                        "ne",
+                        "isinf",
+                        "any",
+                    )
                 )
-            ):
-                output_bool = True
-            else:
-                output_bool = False
+            )
             name = f"output{i}"
             output.name = name
             self.network.mark_output(output)
