@@ -6,8 +6,7 @@ from ..converter_registry import dynamo_tensorrt_converter
 from torch.fx.node import Argument, Target
 
 from torch_tensorrt.fx.types import TRTNetwork, TRTTensor
-from torch_tensorrt.dynamo.converters import SourceIR
-from torch_tensorrt.dynamo.converters import impl
+from torch_tensorrt.dynamo.conversion import SourceIR, impl
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 
