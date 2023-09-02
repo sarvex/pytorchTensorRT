@@ -27,11 +27,7 @@ def _internal_input_to_torch_class_input(i: _C.Input) -> torch.classes.tensorrt.
 
 
 def _supported_input_size_type(input_size: Any) -> bool:
-    if isinstance(input_size, torch.Size):
-        return True
-    elif isinstance(input_size, tuple):
-        return True
-    elif isinstance(input_size, list):
+    if isinstance(input_size, (torch.Size, tuple, list)):
         return True
     else:
         raise TypeError(
@@ -66,7 +62,7 @@ def _parse_op_precision(precision: Any) -> _enums.dtype:
 
 def _parse_enabled_precisions(precisions: Any) -> Set:
     parsed_precisions = set()
-    if any([isinstance(precisions, type) for type in [list, tuple, set]]):
+    if any(isinstance(precisions, type) for type in [list, tuple, set]):
         for p in precisions:
             parsed_precisions.add(_parse_op_precision(p))
     else:
@@ -87,18 +83,14 @@ def _parse_device_type(device: Any) -> _enums.DeviceType:
     elif isinstance(device, _C.DeviceType):
         return device
     elif isinstance(device, trt.DeviceType):
-        if device == trt.DeviceType.DLA:
-            return _C.DeviceType.DLA
-        return _C.DeviceType.GPU
+        return _C.DeviceType.DLA if device == trt.DeviceType.DLA else _C.DeviceType.GPU
     elif isinstance(device, str):
-        if device == "gpu" or device == "GPU":
+        if device in ["gpu", "GPU"]:
             return _C.DeviceType.GPU
-        elif device == "dla" or device == "DLA":
+        elif device in ["dla", "DLA"]:
             return _C.DeviceType.DLA
         else:
-            ValueError(
-                "Got a device type other than GPU or DLA (type: " + str(device) + ")"
-            )
+            ValueError(f"Got a device type other than GPU or DLA (type: {str(device)})")
     else:
         raise TypeError(
             "Device specification must be of type torch.device, string or torch_tensorrt.DeviceType, but got: "
@@ -141,9 +133,8 @@ def _parse_torch_fallback(fallback_info: Dict[str, Any]) -> _ts_C.TorchFallback:
     info = _ts_C.TorchFallback()
     if "enabled" not in fallback_info:
         raise KeyError("Enabled is required parameter")
-    else:
-        assert isinstance(fallback_info["enabled"], bool)
-        info.enabled = fallback_info["enabled"]
+    assert isinstance(fallback_info["enabled"], bool)
+    info.enabled = fallback_info["enabled"]
     if "min_block_size" in fallback_info:
         assert isinstance(fallback_info["min_block_size"], int)
         info.min_block_size = fallback_info["min_block_size"]
@@ -177,9 +168,7 @@ def _parse_input_signature(input_signature: Any, depth: int = 0):
             input = _parse_input_signature(item, depth + 1)
             input_list.append(input)
         return input_list
-    elif isinstance(input_signature, Input) or isinstance(
-        input_signature, torch.Tensor
-    ):
+    elif isinstance(input_signature, (Input, torch.Tensor)):
         i = (
             Input.from_tensor(input_signature)
             if isinstance(input_signature, torch.Tensor)
@@ -209,13 +198,10 @@ def _parse_input_signature(input_signature: Any, depth: int = 0):
                 "Invalid shape mode detected for input while parsing the input_signature"
             )
 
-        clone = _internal_input_to_torch_class_input(ts_i._to_internal())
-        return clone
+        return _internal_input_to_torch_class_input(ts_i._to_internal())
     else:
         raise KeyError(
-            "Input signature contains an unsupported type {}".format(
-                type(input_signature)
-            )
+            f"Input signature contains an unsupported type {type(input_signature)}"
         )
 
 
@@ -226,15 +212,11 @@ def _parse_compile_spec(compile_spec_: Dict[str, Any]) -> _ts_C.CompileSpec:
 
     if len(compile_spec["inputs"]) > 0:
         if not all(
-            [
-                isinstance(i, torch.Tensor) or isinstance(i, Input)
-                for i in compile_spec["inputs"]
-            ]
+            isinstance(i, (torch.Tensor, Input))
+            for i in compile_spec["inputs"]
         ):
             raise KeyError(
-                "Input specs should be either torch_tensorrt.Input or torch.Tensor, found types: {}".format(
-                    [type(i) for i in compile_spec["inputs"]]
-                )
+                f'Input specs should be either torch_tensorrt.Input or torch.Tensor, found types: {[type(i) for i in compile_spec["inputs"]]}'
             )
 
         inputs = [

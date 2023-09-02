@@ -70,11 +70,8 @@ def einsum_insertion_fn(
         1 <= len(inputs) <= 2
     ), f"TRT Einsum currently only supports 1 or 2 Tensors, got {len(inputs)} Tensors"
 
-    # Ensure the input is formatted as an equation and
-    new_node = gm.graph.call_function(
+    return gm.graph.call_function(
         torch.ops.tensorrt.einsum,
         args=(equation, inputs),
         kwargs=node.kwargs,
     )
-
-    return new_node

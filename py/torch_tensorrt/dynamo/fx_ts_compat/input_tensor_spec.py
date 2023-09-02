@@ -79,6 +79,7 @@ class InputTensorSpec(NamedTuple):
         """
         assert isinstance(input_obj, Input)
         input_spec = None
+        dtype = input_obj.torch_dtype
         if isinstance(input_obj.shape, dict):
             min_shape = input_obj.shape["min_shape"]
             opt_shape = input_obj.shape["opt_shape"]
@@ -89,18 +90,14 @@ class InputTensorSpec(NamedTuple):
                     dyn_shape.append(min)
                 else:
                     dyn_shape.append(-1)
-            dtype = input_obj.torch_dtype
-            input_spec = cls(
+            return cls(
                 shape=dyn_shape,
                 dtype=dtype,
                 shape_ranges=[(min_shape, opt_shape, max_shape)],
             )
         else:
             shape = input_obj.shape
-            dtype = input_obj.torch_dtype
-            input_spec = cls(shape=shape, dtype=dtype)
-
-        return input_spec
+            return cls(shape=shape, dtype=dtype)
 
     @classmethod
     def from_tensors_with_dynamic_batch_size(
@@ -145,7 +142,12 @@ class InputTensorSpec(NamedTuple):
             ), f"The {i}th tensor (shape: {tensor.shape}) doesn't have the correct batch size: {batch_size}."
             shape = list(tensor.shape)
             shape[batch_dim] = -1
-            shape_ranges: List[ShapeRange] = [tuple(tuple(shape[0:batch_dim] + [bs] + shape[batch_dim + 1 :]) for bs in batch_size_range)] * opt_profile_replica  # type: ignore[list-item]
+            shape_ranges: List[ShapeRange] = [
+                tuple(
+                    tuple(shape[:batch_dim] + [bs] + shape[batch_dim + 1 :])
+                    for bs in batch_size_range
+                )
+            ] * opt_profile_replica
             input_specs.append(
                 cls(tuple(shape), tensor.dtype, tensor.device, shape_ranges)
             )
@@ -166,16 +168,8 @@ class InputTensorSpec(NamedTuple):
 
     @staticmethod
     def create_inputs_from_specs(input_specs: Iterable["InputTensorSpec"]):
-        inputs = []
-        for spec in input_specs:
-            inputs.append(spec.to_random_tensor())
-
-        return inputs
+        return [spec.to_random_tensor() for spec in input_specs]
 
     @staticmethod
     def create_inputs_from_max_specs(input_specs: Iterable["InputTensorSpec"]):
-        inputs = []
-        for spec in input_specs:
-            inputs.append(spec.to_random_tensor(2))
-
-        return inputs
+        return [spec.to_random_tensor(2) for spec in input_specs]

@@ -93,10 +93,10 @@ class TRTModule(torch.nn.Module):
 
     def _on_state_dict(self, state_dict, prefix, local_metadata):
         self._check_initialized()
-        state_dict[prefix + "engine"] = bytearray(self.engine.serialize())
-        state_dict[prefix + "input_names"] = self.input_names
-        state_dict[prefix + "output_names"] = self.output_names
-        state_dict[prefix + "cuda_graph_batch_size"] = self.cuda_graph_batch_size
+        state_dict[f"{prefix}engine"] = bytearray(self.engine.serialize())
+        state_dict[f"{prefix}input_names"] = self.input_names
+        state_dict[f"{prefix}output_names"] = self.output_names
+        state_dict[f"{prefix}cuda_graph_batch_size"] = self.cuda_graph_batch_size
 
     def _load_from_state_dict(
         self,
@@ -108,14 +108,14 @@ class TRTModule(torch.nn.Module):
         unexpected_keys,
         error_msgs,
     ):
-        engine_bytes = state_dict[prefix + "engine"]
+        engine_bytes = state_dict[f"{prefix}engine"]
 
         logger = trt.Logger()
         runtime = trt.Runtime(logger)
         self.engine = runtime.deserialize_cuda_engine(engine_bytes)
 
-        self.input_names = state_dict[prefix + "input_names"]
-        self.output_names = state_dict[prefix + "output_names"]
+        self.input_names = state_dict[f"{prefix}input_names"]
+        self.output_names = state_dict[f"{prefix}output_names"]
         self._initialize()
 
     def __getstate__(self):
@@ -212,10 +212,7 @@ class TRTModule(torch.nn.Module):
                         bindings, torch.cuda.current_stream().cuda_stream
                     )
 
-            if len(outputs) == 1:
-                return outputs[0]
-
-            return tuple(outputs)
+            return outputs[0] if len(outputs) == 1 else tuple(outputs)
 
     def enable_profiling(self, profiler: "trt.IProfiler" = None):
         """

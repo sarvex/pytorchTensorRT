@@ -33,7 +33,8 @@ if __name__ == "__main__":
     projects = utils.CHECK_PROJECTS(sys.argv[1:])
     if "//..." in projects:
         projects = [
-            p.replace(BAZEL_ROOT, "/")[:-1] for p in glob.glob(BAZEL_ROOT + "/*/")
+            p.replace(BAZEL_ROOT, "/")[:-1]
+            for p in glob.glob(f"{BAZEL_ROOT}/*/")
         ]
         projects = [p for p in projects if p not in utils.BLACKLISTED_BAZEL_TARGETS]
 
@@ -41,7 +42,7 @@ if __name__ == "__main__":
     for p in projects:
         if p.endswith("/..."):
             p = p[:-4]
-        path = BAZEL_ROOT + "/" + p[2:]
+        path = f"{BAZEL_ROOT}/{p[2:]}"
         files = utils.glob_files(path, utils.VALID_CPP_FILE_TYPES)
         if files != []:
             if lint(files, color):

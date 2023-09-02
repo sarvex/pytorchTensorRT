@@ -29,9 +29,7 @@ if check_output.returncode != 0:
         stdout=subprocess.PIPE,
     )
     out_text = diff_output.stdout.decode("utf-8")
-    comment = """There are some changes that do not conform to Python style guidelines:\n ```diff\n{}```""".format(
-        out_text
-    )
+    comment = f"""There are some changes that do not conform to Python style guidelines:\n ```diff\n{out_text}```"""
     approval = "REQUEST_CHANGES"
 
 try:

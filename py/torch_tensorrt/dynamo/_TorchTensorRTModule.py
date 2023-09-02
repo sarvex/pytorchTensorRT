@@ -82,11 +82,17 @@ class TorchTensorRTModule(torch.nn.Module):
             self.engine = torch.classes.tensorrt.Engine(
                 [
                     torch.ops.tensorrt.ABI_VERSION(),
-                    self.name + "_engine" if self.name != "" else "tensorrt_engine",
+                    f"{self.name}_engine"
+                    if self.name != ""
+                    else "tensorrt_engine",
                     target_device._to_serialized_rt_device(),
                     serialized_engine,
-                    TorchTensorRTModule._pack_binding_names(self.input_binding_names),
-                    TorchTensorRTModule._pack_binding_names(self.output_binding_names),
+                    TorchTensorRTModule._pack_binding_names(
+                        self.input_binding_names
+                    ),
+                    TorchTensorRTModule._pack_binding_names(
+                        self.output_binding_names
+                    ),
                 ]
             )
         else:
@@ -155,10 +161,7 @@ class TorchTensorRTModule(torch.nn.Module):
 
         outputs = torch.ops.tensorrt.execute_engine(list(inputs), self.engine)
 
-        if len(outputs) == 1:
-            return outputs[0]
-
-        return tuple(outputs)
+        return outputs[0] if len(outputs) == 1 else tuple(outputs)
 
     def enable_profiling(self, profiling_results_dir: str = None):
         """Enable the profiler to collect latency information about the execution of the engine

@@ -292,7 +292,7 @@ def acc_ops_pad_with_slice_layer(
 
     # cast value to TRTensor
     dt = unified_dtype_converter(input_val.dtype, Frameworks.TORCH)
-    value = 0 if value == None else value
+    value = 0 if value is None else value
     value_const = get_trt_tensor(
         network, torch.tensor([value], dtype=dt), f"{name}_value"
     )
@@ -346,12 +346,8 @@ def acc_ops_flatten(
         )
 
     num_dims = len(input_val.shape) + (1 if network.has_implicit_batch_dimension else 0)
-    start_dim = get_positive_dim(
-        cast(int, kwargs["start_dim"] if "start_dim" in kwargs else 0), num_dims
-    )
-    end_dim = get_positive_dim(
-        cast(int, kwargs["end_dim"] if "end_dim" in kwargs else -1), num_dims
-    )
+    start_dim = get_positive_dim(cast(int, kwargs.get("start_dim", 0)), num_dims)
+    end_dim = get_positive_dim(cast(int, kwargs.get("end_dim", -1)), num_dims)
 
     if network.has_implicit_batch_dimension:
         assert start_dim != 0, "Can't flatten batch dimension when it's implicit."
@@ -426,8 +422,7 @@ def acc_ops_flatten(
             if i >= start_dim and i <= end_dim:
                 flatten_dim *= s
             elif i == end_dim + 1:
-                final_shape.append(flatten_dim)
-                final_shape.append(s)
+                final_shape.extend((flatten_dim, s))
             else:
                 final_shape.append(s)
         if end_dim == len(input_val.shape) - 1:
@@ -453,7 +448,7 @@ def acc_ops_size(
     name: str,
 ) -> Union[TRTTensor, Sequence[TRTTensor]]:
     input_t = kwargs["input"]
-    if type(input_t) == torch.nn.Parameter or type(input_t) == torch.Tensor:
+    if type(input_t) in [torch.nn.Parameter, torch.Tensor]:
         if (
             not has_dynamic_shape(input_t.shape)
             and network.has_implicit_batch_dimension
@@ -496,7 +491,7 @@ def acc_ops_numel(
         )
 
     if has_dynamic_shape(input_val.shape):
-        raise RuntimeError(f"numel does not support dynamic shapes.")
+        raise RuntimeError("numel does not support dynamic shapes.")
 
     numel = np.prod(input_val.shape)
     layer = network.add_constant((1,), trt.Weights(np.array(numel, dtype=np.float32)))
@@ -744,10 +739,7 @@ def acc_ops_softmax(
 
     # Used to get dim when dim is None. Copied from PyTorch softmax implementation.
     def get_softmax_dim(ndim: int) -> int:
-        if ndim == 0 or ndim == 1 or ndim == 3:
-            ret = 0
-        else:
-            ret = 1
+        ret = 0 if ndim in {0, 1, 3} else 1
         return ret
 
     if kwargs["dim"] is None:
@@ -1278,7 +1270,7 @@ def add_acc_ops_dim_reduce(network, target, args, kwargs, name, reduce_op):
     new_kwargs["sorted"] = False
 
     topk_out0, topk_out1 = acc_ops_topk(
-        network, target, args, new_kwargs, name + "_topk"
+        network, target, args, new_kwargs, f"{name}_topk"
     )
 
     topk_out0.name = f"{name}_topk0"
@@ -1297,12 +1289,7 @@ def add_acc_ops_dim_reduce(network, target, args, kwargs, name, reduce_op):
     input_val = topk_out0
     shape = input_val.shape
 
-    output_shape = []
-    for i, s in enumerate(shape):
-        if i == dim and s == 1:
-            continue
-        output_shape.append(s)
-
+    output_shape = [s for i, s in enumerate(shape) if i != dim or s != 1]
     shuffle_layer0 = network.add_shuffle(input_val)
     shuffle_layer0.reshape_dims = tuple(output_shape)
     set_layer_name(shuffle_layer0, target, f"{name}_shuffle0")
@@ -1740,15 +1727,15 @@ def acc_ops_any(
         )
 
     if input_t.dtype in (trt.float32, trt.float16, trt.int32):
-        comp_t = torch.zeros(tuple([*input_t.shape])).to(
+        comp_t = torch.zeros((*input_t.shape,)).to(
             unified_dtype_converter(input_t.dtype, Frameworks.TORCH)
         )
         comp_t = get_trt_tensor(network, comp_t, f"{name}_comp_t")
         kwargs_new = {"input": input_t, "other": comp_t}
-        eq_output = acc_ops_eq(network, target, None, kwargs_new, name + "_eq")
+        eq_output = acc_ops_eq(network, target, None, kwargs_new, f"{name}_eq")
         kwargs_new = {"input": eq_output}
         not_output = acc_ops_logical_not(
-            network, target, None, kwargs_new, name + "_not"
+            network, target, None, kwargs_new, f"{name}_not"
         )
     else:
         not_output = input_t
@@ -1763,10 +1750,10 @@ def acc_ops_any(
         }
     else:
         kwargs_new = {"input": int_output}
-    sum_output = acc_ops_sum(network, target, None, kwargs_new, name + "_sum")
+    sum_output = acc_ops_sum(network, target, None, kwargs_new, f"{name}_sum")
     # cast int to bool
     output = type_cast(network, target, f"{name}_cast_bool", sum_output, trt.bool)
-    output.name = output.name + "_any"
+    output.name = f"{output.name}_any"
     return output
 
 
@@ -1780,7 +1767,7 @@ def acc_ops_fmod(
 ) -> Union[TRTTensor, Sequence[TRTTensor]]:
     # NOTE: TRT doesnt currently implement fmod so we need multiple operations to perform it
     trunc_div_value = trunc_div(
-        kwargs["input"], kwargs["other"], network, target, name + "_trunc_div"
+        kwargs["input"], kwargs["other"], network, target, f"{name}_trunc_div"
     )
     prod_value = add_binary_elementwise_layer(
         network,
@@ -1788,17 +1775,16 @@ def acc_ops_fmod(
         kwargs["other"],
         trt.ElementWiseOperation.PROD,
         target,
-        name + "_prod",
+        f"{name}_prod",
     )
-    sub_value = add_binary_elementwise_layer(
+    return add_binary_elementwise_layer(
         network,
         kwargs["input"],
         prod_value,
         trt.ElementWiseOperation.SUB,
         target,
-        name + "_sub",
+        f"{name}_sub",
     )
-    return sub_value
 
 
 # T113156424 embedding implemenatation is very limited and shows no usage in hf models due to the indices are int64.
@@ -1953,7 +1939,7 @@ def acc_ops_max_poolnd(
     dilation = extend_attr_to_tuple(kwargs["dilation"], extend_len)
     ceil_mode = kwargs["ceil_mode"]
 
-    if len(stride) == 0 or stride[0] == None:
+    if len(stride) == 0 or stride[0] is None:
         stride = kernel_size
 
     ones = (1,) * extend_len
@@ -1991,7 +1977,7 @@ def acc_ops_squeeze(
             "of the TensorRT region!"
         )
 
-    dim = cast(Optional[int], kwargs["dim"] if "dim" in kwargs else None)
+    dim = cast(Optional[int], kwargs.get("dim", None))
     # Squeeze with dim=None would only work in explicit batch dim mode without any dynamic
     # dim, which is a very rare case. For now we just claim not supporting dim=None.
     assert dim is not None, "We don't support dim=None right now for squeeze."
@@ -2008,11 +1994,7 @@ def acc_ops_squeeze(
         len(get_dynamic_dims(input_val.shape)) <= 1
     ), "Currently more than one dynamic dim for input to squeeze is not supported."
 
-    output_shape = []
-    for i, s in enumerate(input_val.shape):
-        if i == dim and s == 1:
-            continue
-        output_shape.append(s)
+    output_shape = [s for i, s in enumerate(input_val.shape) if i != dim or s != 1]
     layer = network.add_shuffle(input_val)
     layer.reshape_dims = tuple(output_shape)
     set_layer_name(layer, target, name)
@@ -2287,12 +2269,12 @@ def acc_ops_avg_pool1d(
     ceil_mode = kwargs["ceil_mode"]
     count_include_pad = kwargs["count_include_pad"]
 
-    if len(stride) == 0 or stride[0] == None:
+    if len(stride) == 0 or stride[0] is None:
         stride = kernel_size
 
     shuffle_layer = network.add_shuffle(input_val)
     shuffle_layer.reshape_dims = tuple(input_val.shape) + (1,)
-    set_layer_name(shuffle_layer, target, name + "_shuffle1")
+    set_layer_name(shuffle_layer, target, f"{name}_shuffle1")
     shuffle_out = shuffle_layer.get_output(0)
 
     layer = network.add_pooling_nd(
@@ -2301,7 +2283,7 @@ def acc_ops_avg_pool1d(
 
     layer.stride_nd = stride + (1,)
     layer.padding_nd = padding + (0,)
-    layer.average_count_excludes_padding = False if count_include_pad else True
+    layer.average_count_excludes_padding = not count_include_pad
     set_layer_name(layer, target, name)
     if ceil_mode:
         layer.padding_mode = trt.PaddingMode.EXPLICIT_ROUND_UP
@@ -2309,7 +2291,7 @@ def acc_ops_avg_pool1d(
     output = layer.get_output(0)
     layer = network.add_shuffle(output)
     layer.reshape_dims = tuple(output.shape)[:-1]
-    set_layer_name(layer, target, name + "_shuffle2")
+    set_layer_name(layer, target, f"{name}_shuffle2")
 
     return layer.get_output(0)
 
@@ -2337,7 +2319,7 @@ def acc_ops_avg_pool2d(
     count_include_pad = kwargs["count_include_pad"]
     divisor_override = kwargs["divisor_override"]
 
-    if len(stride) == 0 or stride[0] == None:
+    if len(stride) == 0 or stride[0] is None:
         stride = kernel_size
 
     if divisor_override:
@@ -2348,7 +2330,7 @@ def acc_ops_avg_pool2d(
     )
     layer.stride = stride
     layer.padding = padding
-    layer.average_count_excludes_padding = False if count_include_pad else True
+    layer.average_count_excludes_padding = not count_include_pad
     set_layer_name(layer, target, name)
 
     if ceil_mode:
@@ -2422,11 +2404,11 @@ def acc_ops_slice_tensor(
             raise RuntimeError(
                 f"We do not support slice_tensor at batch dim when it's implicit, got {dim}!"
             )
-        dim = dim - 1
-    else:
-        if dynamic_shape:
-            # Check whether slice target dim is dynamic shape dim
-            assert input_val.shape[dim] != -1, "Can't chunk on dynamic shape dimension!"
+        else:
+            dim = dim - 1
+    elif dynamic_shape:
+        # Check whether slice target dim is dynamic shape dim
+        assert input_val.shape[dim] != -1, "Can't chunk on dynamic shape dimension!"
 
     start_int = cast(int, kwargs["start"])
     stop_int = cast(int, kwargs["stop"])
@@ -2478,9 +2460,7 @@ def acc_ops_expand_tensor(
     inshape = tuple(input_val.shape)
     shape = tuple(shape)
     start = tuple([0] * ranks)
-    stride = tuple(
-        [int(i == o) for i, o in zip(inshape, shape)]
-    )  # stride == 1 if dimensions match, 0 otherwise
+    stride = tuple(int(i == o) for i, o in zip(inshape, shape))
     layer = network.add_slice(input_val, start=start, shape=shape, stride=stride)
     set_layer_name(layer, target, name)
     return layer.get_output(0)
@@ -2660,10 +2640,9 @@ def acc_ops_split(
     if network.has_implicit_batch_dimension:
         assert dim != 0, "Can't split on batch dim when it's implicit!"
         dim -= 1
-    else:
-        if dynamic_shape > 0:
-            # Check whether slice target dim is dynamic shape dim
-            assert input_val.shape[dim] != -1, "Can't chunk on dynamic shape dimension!"
+    elif dynamic_shape > 0:
+        # Check whether slice target dim is dynamic shape dim
+        assert input_val.shape[dim] != -1, "Can't chunk on dynamic shape dimension!"
 
     split_size = cast(int, kwargs["split_size"])
     start = [0] * len(input_val.shape)
@@ -2787,8 +2766,7 @@ def add_clamp(network, input, val, op, name):
         acc_ops_clamp_trt = network.add_constant(
             acc_ops_clamp_shape, acc_ops_clamp_tensor
         ).get_output(0)
-    layer = network.add_elementwise(input, acc_ops_clamp_trt, op)
-    return layer
+    return network.add_elementwise(input, acc_ops_clamp_trt, op)
 
 
 @tensorrt_converter(acc_ops.clamp)
@@ -2874,7 +2852,7 @@ def acc_ops_getitem(
         """
         Gather the number of slice in getitem slices.
         """
-        return sum(1 for s in slices if isinstance(s, slice) or isinstance(s, int))
+        return sum(1 for s in slices if isinstance(s, (slice, int)))
 
     def slice_to_trt_params(py_slice, dim_size):
         """
@@ -3155,7 +3133,7 @@ def acc_ops_quantize_per_tensor(
     scale_layer = network.add_constant(
         (1,), trt.Weights(np.ascontiguousarray([float(q_scale)], dtype=np.float32))
     )
-    scale_layer.name = input_val.name + ".per_tensor_quant.scale"
+    scale_layer.name = f"{input_val.name}.per_tensor_quant.scale"
     scale = scale_layer.get_output(0)
     # assert trt.__version__ > "8.0", "Explicit quantize op is only supported in "
     # "TensorRT 8.0 or above, current TensorRT version:" + trt.__version__

@@ -20,7 +20,7 @@ def get_target_from_module(mod: torch.nn.Module, target: str):
     """
     Gets `target` from `mod` and returns it. If `target` is empty then returns `mod.`
     """
-    if target == "":
+    if not target:
         return mod
 
     target_atoms = target.split(".")
@@ -171,7 +171,7 @@ def get_unique_attr_name_in_module(mod_traced: torch.fx.GraphModule, name: str) 
     while hasattr(mod_traced, name):
         match = re.match(r"(.*)_(\d+)$", name)
         if match is None:
-            name = name + "_1"
+            name = f"{name}_1"
         else:
             base, num = match.group(1, 2)
             name = f"{base}_{int(num) + 1}"
@@ -184,9 +184,7 @@ def map_tensor_metadata(a: Any, fn: Callable):
     Map some `fn` to `a`, where `a` is either a TensorMetadata, or else a tuple/list/dict
     recursively containing TensorMetadata.
     """
-    if isinstance(a, int):
-        return 1
-    elif a is None:
+    if isinstance(a, int) or a is None:
         return 1
     elif isinstance(a, TensorMetadata):
         return fn(a)
@@ -203,11 +201,10 @@ def map_tensor_metadata(a: Any, fn: Callable):
 
 
 def get_tensor_meta(node: torch.fx.Node) -> TensorMetadata:
-    tensor_meta = node.meta.get("tensor_meta")
-
-    if not tensor_meta:
+    if tensor_meta := node.meta.get("tensor_meta"):
+        return tensor_meta
+    else:
         raise RuntimeError(
             f"Node has no tensor metadata associated with it! "
             f"Check that shape propagation has run. {node.format_node()}"
         )
-    return tensor_meta

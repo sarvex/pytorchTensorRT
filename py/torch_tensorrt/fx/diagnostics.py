@@ -103,13 +103,12 @@ class DiagnosticsWriter:
             res, err = _res_or_err(data)
             if err:
                 to_write = err.encode("utf-8")
+            elif isinstance(res, str):
+                to_write = res.encode("utf-8")
+            elif isinstance(res, bytes):
+                to_write = res
             else:
-                if isinstance(res, str):
-                    to_write = res.encode("utf-8")
-                elif isinstance(res, bytes):
-                    to_write = res
-                else:
-                    raise TypeError(f"Unknown data type: {type(res)}")
+                raise TypeError(f"Unknown data type: {type(res)}")
             self._write(file_name, to_write)
         except Exception as e:
             # Log the error and swallow the exception, as this should not

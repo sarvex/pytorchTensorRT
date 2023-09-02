@@ -63,13 +63,13 @@ class LowerPrecision(Enum):
 
     @staticmethod
     def from_str(label: str) -> Optional["LowerPrecision"]:
-        if label in ("fp32", "float32", "float", "torch.float32"):
+        if label in {"fp32", "float32", "float", "torch.float32"}:
             return LowerPrecision.FP32
-        elif label in ("fp16", "float16", "half", "torch.half", "torch.float16"):
+        elif label in {"fp16", "float16", "half", "torch.half", "torch.float16"}:
             return LowerPrecision.FP16
         elif label in ("int8"):
             return LowerPrecision.INT8
-        elif label in ("bf16", "bfloat16", "torch.bfloat16"):
+        elif label in {"bf16", "bfloat16", "torch.bfloat16"}:
             return LowerPrecision.BF16
         else:
             return None
@@ -101,7 +101,7 @@ def unified_dtype_converter(
     elif dtype in (np.float32, torch.float32, trt.float32):
         return DataTypeEquivalence[trt.float32][to]
     else:
-        raise TypeError("%s is not a supported dtype" % dtype)
+        raise TypeError(f"{dtype} is not a supported dtype")
 
 
 def get_dynamic_dims(shape: Shape) -> List[int]:
@@ -117,13 +117,7 @@ def get_dynamic_dims(shape: Shape) -> List[int]:
         A list of integers contains all the dynamic dimensions
         in the given shape
     """
-    dynamic_dims = []
-
-    for i, s in enumerate(shape):
-        if s == -1:
-            dynamic_dims.append(i)
-
-    return dynamic_dims
+    return [i for i, s in enumerate(shape) if s == -1]
 
 
 def proxytensor_trace(mod, inputs):

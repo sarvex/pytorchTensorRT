@@ -943,7 +943,7 @@ class AccTracerTest(unittest.TestCase):
                 is_relu = node.target == acc_ops.relu
                 self.assertTrue(is_sigmoid or is_relu)
             else:
-                self.assertTrue(node.op == "placeholder" or node.op == "output")
+                self.assertTrue(node.op in ["placeholder", "output"])
 
         self.assertTrue(torch.equal(m(input), traced(input)))
 
@@ -1537,10 +1537,13 @@ class AccTracerTest(unittest.TestCase):
         )
 
     def test_hardswish(self):
+
+
+
         class TestModule(nn.Module):
             def forward(self, x: torch.Tensor) -> torch.Tensor:
-                y = nn.functional.hardswish(x)
-                return y
+                return nn.functional.hardswish(x)
+
 
         m = TestModule()
         x = torch.randn(3, 4, 5)
@@ -1551,7 +1554,7 @@ class AccTracerTest(unittest.TestCase):
                 ph_x = node
             elif node.op == "call_function" and node.target == acc_ops.hardsigmoid:
                 hardsigmoid_y = node
-                self.assertEqual(node.kwargs["input"], ph_x)
+                self.assertEqual(hardsigmoid_y.kwargs["input"], ph_x)
             elif node.op == "call_function" and node.target == acc_ops.mul:
                 res_y = node
                 self.assertEqual(node.kwargs["input"], hardsigmoid_y)
@@ -2258,7 +2261,7 @@ class AccTracerTest(unittest.TestCase):
                 self.assertEqual(str(node.target), "a")
                 ph = node
             elif node.op == "call_function" and node.target == acc_ops.getitem:
-                self.assertTrue(node.kwargs["idx"] == 0 or node.kwargs["idx"] == 1)
+                self.assertTrue(node.kwargs["idx"] in [0, 1])
                 if node.kwargs["idx"] == 0:
                     getitem_0 = node
                 else:
@@ -2303,9 +2306,7 @@ class AccTracerTest(unittest.TestCase):
                 self.assertEqual(str(node.target), "a")
                 ph = node
             elif node.op == "call_function" and node.target == acc_ops.getitem:
-                self.assertTrue(
-                    node.kwargs["idx"] == "foo" or node.kwargs["idx"] == "bar"
-                )
+                self.assertTrue(node.kwargs["idx"] in ["foo", "bar"])
                 if node.kwargs["idx"] == "foo":
                     getitem_0 = node
                 else:

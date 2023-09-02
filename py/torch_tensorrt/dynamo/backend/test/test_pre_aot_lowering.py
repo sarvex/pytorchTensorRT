@@ -6,6 +6,7 @@ from torch_tensorrt.dynamo import compile
 
 class TestMaxPool1D(TestCase):
     def test_pre_aot_lowering_maxpool1d(self):
+
         class MaxPool1D(torch.nn.Module):
             def __init__(self, *args, **kwargs) -> None:
                 super().__init__(*args, **kwargs)
@@ -47,12 +48,15 @@ class TestMaxPool1D(TestCase):
 
         max_diff = torch.max(torch.abs(optimized_model_results - torch_model_results))
         self.assertAlmostEqual(
-            max_diff, 0, f"Maxpool1d TRT outputs don't match with the original model."
+            max_diff,
+            0,
+            "Maxpool1d TRT outputs don't match with the original model.",
         )
 
 
 class TestEinsum(TestCase):
     def test_pre_aot_lowering_einsum(self):
+
         class Einsum(torch.nn.Module):
             def forward(self, x, y):
                 return torch.einsum("ij,ji->ij", x, y)
@@ -93,7 +97,7 @@ class TestEinsum(TestCase):
 
         max_diff = torch.max(torch.abs(optimized_model_results - torch_model_results))
         self.assertAlmostEqual(
-            max_diff, 0, f"Einsum TRT outputs don't match with the original model."
+            max_diff, 0, "Einsum TRT outputs don't match with the original model."
         )
 
 

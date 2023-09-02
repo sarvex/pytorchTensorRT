@@ -43,7 +43,7 @@ class LoopFallbackEval(nn.Module):
 
     def forward(self, x):
         add_list = torch.empty(0).to(x.device)
-        for i in range(x.shape[1]):
+        for _ in range(x.shape[1]):
             add_list = torch.cat((add_list, torch.tensor([x.shape[1]]).to(x.device)), 0)
         return x + add_list
 
@@ -91,8 +91,7 @@ class FallbackInplaceOPIf(nn.Module):
         mod_list = [x]
         if x.sum() > y.sum():
             mod_list.append(y)
-        z = torch.cat(mod_list)
-        return z
+        return torch.cat(mod_list)
 
 
 # Collection input/output models
@@ -101,8 +100,7 @@ class StandardTensorInput(nn.Module):
         super(StandardTensorInput, self).__init__()
 
     def forward(self, x, y):
-        r = x + y
-        return r
+        return x + y
 
 
 class TupleInput(nn.Module):
@@ -110,8 +108,7 @@ class TupleInput(nn.Module):
         super(TupleInput, self).__init__()
 
     def forward(self, z: Tuple[torch.Tensor, torch.Tensor]):
-        r = z[0] + z[1]
-        return r
+        return z[0] + z[1]
 
 
 class ListInput(nn.Module):
@@ -119,8 +116,7 @@ class ListInput(nn.Module):
         super(ListInput, self).__init__()
 
     def forward(self, z: List[torch.Tensor]):
-        r = z[0] + z[1]
-        return r
+        return z[0] + z[1]
 
 
 class TupleInputOutput(nn.Module):
@@ -131,8 +127,7 @@ class TupleInputOutput(nn.Module):
         r1 = z[0] + z[1]
         r2 = z[0] - z[1]
         r1 = r1 * 10
-        r = (r1, r2)
-        return r
+        return r1, r2
 
 
 class ListInputOutput(nn.Module):
@@ -142,8 +137,7 @@ class ListInputOutput(nn.Module):
     def forward(self, z: List[torch.Tensor]):
         r1 = z[0] + z[1]
         r2 = z[0] - z[1]
-        r = [r1, r2]
-        return r
+        return [r1, r2]
 
 
 class ListInputTupleOutput(nn.Module):
@@ -159,8 +153,7 @@ class ListInputTupleOutput(nn.Module):
         r4 = [r2, r1]
         tuple_out = self.tuple_model(r3)
         list_out = self.list_model(r4)
-        r = (tuple_out[1], list_out[0])
-        return r
+        return tuple_out[1], list_out[0]
 
 
 def BertModule():
@@ -185,5 +178,4 @@ def BertModule():
     model = BertModel(config)
     model.eval()
     model = BertModel.from_pretrained(model_name, torchscript=True)
-    traced_model = torch.jit.trace(model, [tokens_tensor, segments_tensors])
-    return traced_model
+    return torch.jit.trace(model, [tokens_tensor, segments_tensors])

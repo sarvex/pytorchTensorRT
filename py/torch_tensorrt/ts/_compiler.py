@@ -137,8 +137,7 @@ def compile(
     }
 
     compiled_cpp_mod = _C.compile_graph(module._c, _parse_compile_spec(spec))
-    compiled_module = torch.jit._recursive.wrap_cpp_module(compiled_cpp_mod)
-    return compiled_module
+    return torch.jit._recursive.wrap_cpp_module(compiled_cpp_mod)
 
 
 def convert_method_to_trt_engine(

@@ -78,12 +78,14 @@ class TestSplit(TestCase):
           ==> c ==>
         """
 
+
+
         class SimpleModule(torch.nn.Module):
             def forward(self, a):
                 b = torch.sin(a)
                 c = torch.cos(a)
-                d = b + c
-                return d
+                return b + c
+
 
         mod = acc_tracer.trace(SimpleModule(), [torch.randn(2, 3)])
 
@@ -632,10 +634,12 @@ class TestSplit(TestCase):
     def test_decline_if_input_dtype(self):
         operator_support = create_trt_operator_support()
 
+
+
         class TestModule(torch.nn.Module):
             def forward(self, a):
-                b = torch.relu(a)
-                return b
+                return torch.relu(a)
+
 
         test_mod = TestModule().cuda().eval()
         x = torch.randn(2, 3)
@@ -692,8 +696,7 @@ class TestSplitComplexGraph(TestCase):
             c = torch.relu(a)
             d = torch.cos(a)
             e = b + c
-            f = e - d
-            return f
+            return e - d
 
     def test_split_complex_graph_1(self):
         mod = acc_tracer.trace(self.TestModule(), [torch.randn(2, 3)])
@@ -806,8 +809,7 @@ class TestSplitNonTensorEdges(TestCase):
             c = torch.cos(a)
 
             d = b2 + c
-            e = torch.sigmoid(d)
-            return e
+            return torch.sigmoid(d)
 
     def test_split_non_tensor_edges_1(self):
         test_data = torch.randn(2, 3)
@@ -1009,6 +1011,8 @@ class TestAccNodesFinder(TestCase):
         """
 
         # Make a return non-tensor data
+
+
         class TestModule(torch.nn.Module):
             def forward(self, x, y, z):
                 a1 = x.size()
@@ -1017,9 +1021,8 @@ class TestAccNodesFinder(TestCase):
                 b = y + a1
                 c = z - a1
 
-                d = b + c
+                return b + c
 
-                return d
 
         module_nn = TestModule()
         module_fx = torch.fx.symbolic_trace(module_nn)
@@ -1175,18 +1178,20 @@ class TestAccFusionsFinder(TestCase):
         test_splitter(splitter)
 
     def test_exclude_support_node_by_name(self):
+
+
+
         class TestModule(torch.nn.Module):
             def forward(self, a):
                 b = torch.sin(a)
                 c = torch.relu(b)
                 d = torch.cos(c)
                 e = torch.sigmoid(d)
-                f = torch.tanh(e)
-                return f
+                return torch.tanh(e)
+
 
         mod = acc_tracer.trace(TestModule(), [torch.randn(2, 3)])
 
-        # Set sin, cos and tanh as acc node and split with settings
         class CustomOpSupport(op_support.OperatorSupport):
             _support_dict = {
                 "acc_ops.sin": None,

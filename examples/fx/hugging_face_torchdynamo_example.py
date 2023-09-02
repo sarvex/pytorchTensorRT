@@ -173,9 +173,7 @@ def get_cur_memory():
     gc.collect()
     torch.cuda.empty_cache()
     stats = torch.cuda.memory_stats()
-    peak_bytes_requirement = stats["allocated_bytes.all.current"]
-    # print(f"Current memory requirement: {peak_bytes_requirement / 1024 ** 3:.2f} GB")
-    return peak_bytes_requirement
+    return stats["allocated_bytes.all.current"]
 
 
 @torchdynamo.skip
@@ -205,11 +203,7 @@ def check_correctness(args, mod, inputs, optimize_ctx, optimize_name):
         print("ERROR")
         return False
 
-    if optimize_name == "dynamo_fx2trt_fp16":
-        cos_similarity = True
-    else:
-        cos_similarity = False
-
+    cos_similarity = optimize_name == "dynamo_fx2trt_fp16"
     if not same(correct_result, new_result, cos_similarity=cos_similarity, tol=1e-2):
         print("INCORRECT")
         return False
@@ -252,9 +246,7 @@ def bench_model_eval(args, name, mod, eval_inputs, optimize_ctx):
         # Profile time
         iters = 50
         synchronize()
-        timings = []
-        for _ in range(iters):
-            timings.append(timed(mod, forward_pass, eval_inputs))
+        timings = [timed(mod, forward_pass, eval_inputs) for _ in range(iters)]
         t = np.median(timings, axis=0)
     else:
         # does not need recompile for torchdynamo, demo for fx2trt only
@@ -275,9 +267,7 @@ def bench_model_eval(args, name, mod, eval_inputs, optimize_ctx):
             # Profile time
             iters = 50
             synchronize()
-            timings = []
-            for _ in range(iters):
-                timings.append(timed(mod, forward_pass, eval_inputs))
+            timings = [timed(mod, forward_pass, eval_inputs) for _ in range(iters)]
             t = np.median(timings, axis=0)
 
     print(name, t, m)
@@ -413,7 +403,7 @@ def main():
     # fp16
     if optimize_name == "dynamo_fx2trt_fp16":
         experiment = partial(experiment, dtype=torch.float16)
-    if optimize_name == "dynamo_fx2trt_fp32":
+    elif optimize_name == "dynamo_fx2trt_fp32":
         experiment = partial(experiment, dtype=torch.float32)
 
     experiment = partial(

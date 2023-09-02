@@ -26,5 +26,4 @@ def BertModule():
     model = BertModel(config)
     model.eval()
     model = BertModel.from_pretrained(model_name, torchscript=True)
-    traced_model = torch.jit.trace(model, [tokens_tensor, segments_tensors])
-    return traced_model
+    return torch.jit.trace(model, [tokens_tensor, segments_tensors])

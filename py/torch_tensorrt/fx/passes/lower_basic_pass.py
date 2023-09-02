@@ -170,7 +170,7 @@ def fuse_sparse_matmul_add(gm: torch.fx.GraphModule, input: Input):
             continue
 
         weight_t = weight.transpose(0, 1)
-        weight_t_name = "weight_t_tensor_" + str(counter)
+        weight_t_name = f"weight_t_tensor_{str(counter)}"
         gm.register_buffer(weight_t_name, weight_t)
         counter += 1
 
@@ -206,8 +206,8 @@ def trt_transposed_linear(
 
 def check_permute(node: torch.fx.Node):
     ranks = len(node.meta["tensor_meta"].shape)
-    permutation = list(i % ranks for i in node.kwargs["permutation"])  # type: ignore[union-attr]
-    allowed_permutation = list(i for i in range(ranks))
+    permutation = [i % ranks for i in node.kwargs["permutation"]]
+    allowed_permutation = list(range(ranks))
     allowed_permutation[-1] = ranks - 2
     allowed_permutation[-2] = ranks - 1
     return permutation == allowed_permutation
@@ -336,20 +336,20 @@ def list_gen(
     dim: int,
 ):
     if start_node:
-        if end_node:
-            concat_list = [start_node, input_node, end_node]
-        else:
-            concat_list = [start_node, input_node]
+        concat_list = (
+            [start_node, input_node, end_node]
+            if end_node
+            else [start_node, input_node]
+        )
+    elif end_node:
+        concat_list = [input_node, end_node]
     else:
-        if end_node:
-            concat_list = [input_node, end_node]
-        else:
-            concat_list = [input_node]
-    if len(concat_list) > 1:
-        concat_node = gm.graph.call_function(torch.cat, args=(concat_list, dim))
-    else:
-        concat_node = concat_list[0]
-    return concat_node
+        concat_list = [input_node]
+    return (
+        gm.graph.call_function(torch.cat, args=(concat_list, dim))
+        if len(concat_list) > 1
+        else concat_list[0]
+    )
 
 
 def transform_setitem(gm: torch.fx.GraphModule, input: Input):
@@ -501,9 +501,7 @@ def fix_reshape_batch_dim(mod: fx.GraphModule) -> fx.GraphModule:
         if not shape:
             return None
         batch_size = shape[0]
-        if isinstance(batch_size, fx.Node):
-            return batch_size
-        return None
+        return batch_size if isinstance(batch_size, fx.Node) else None
 
     def get_reshape_batch_size_inferred_source(
         batch_size_node: fx.Node,
@@ -656,9 +654,10 @@ def remove_dtype_and_to_pattern(
                 if "input" in next_node.kwargs
                 else next_node.args[0]
             )
-            if len(node.users) == 1 and (
-                next_node.target == acc_ops.to_dtype or next_node.target == "to"
-            ):
+            if len(node.users) == 1 and next_node.target in [
+                acc_ops.to_dtype,
+                "to",
+            ]:
                 next_node.replace_all_uses_with(input)
                 mod.graph.erase_node(next_node)
                 mod.graph.erase_node(node)

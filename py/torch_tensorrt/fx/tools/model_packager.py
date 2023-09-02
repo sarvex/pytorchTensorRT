@@ -64,10 +64,8 @@ def generate_standalone_repro(
             if k in line:
                 sub_string = line.split("(")[0].split()[-1]
                 if sub_string.startswith(k):
-                    mod = sub_string.replace(k + "_", "")
-                    import_modules.add(
-                        "from " + v + " import " + mod + " as " + sub_string
-                    )
+                    mod = sub_string.replace(f"{k}_", "")
+                    import_modules.add(f"from {v} import {mod} as {sub_string}")
     for mod in sorted(import_modules):
         lines.append(mod)
 

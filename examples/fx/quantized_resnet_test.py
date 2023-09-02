@@ -128,13 +128,7 @@ class M(torch.nn.Module):
         # self.conv = torch.nn.Conv2d(3, 3, 3, padding=1)
 
     def forward(self, x):
-        # out = self.conv(x)
-        out = self.linear(x)
-        # out = torch.nn.functional.relu(out)
-        # out += x
-        # out += out
-        # out = torch.nn.functional.relu(out)
-        return out
+        return self.linear(x)
 
 
 # rn18 = M().eval()

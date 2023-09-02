@@ -32,8 +32,7 @@ def get_batch(self, names):
     self.current_batch_idx += self.batch_size
     inputs_gpu = []
     if isinstance(batch, list):
-        for example in batch:
-            inputs_gpu.append(example.to(self.device).data_ptr())
+        inputs_gpu.extend(example.to(self.device).data_ptr() for example in batch)
     else:
         inputs_gpu.append(batch.to(self.device).data_ptr())
     return inputs_gpu
@@ -88,26 +87,20 @@ class DataLoaderCalibrator(object):
         if not isinstance(dataloader, torch.utils.data.DataLoader):
             log(
                 Level.Error,
-                "Dataloader : {} is not a valid instance of torch.utils.data.DataLoader".format(
-                    dataloader
-                ),
+                f"Dataloader : {dataloader} is not a valid instance of torch.utils.data.DataLoader",
             )
 
-        if not cache_file:
-            if use_cache:
-                log(
-                    Level.Debug,
-                    "Using existing cache_file {} for calibration".format(cache_file),
-                )
-            else:
-                log(Level.Debug, "Overwriting existing calibration cache file.")
-        else:
+        if cache_file:
             if use_cache:
                 log(
                     Level.Error,
                     "Input cache file is None but use_cache is set to True in INT8 mode.",
                 )
 
+        elif use_cache:
+            log(Level.Debug, f"Using existing cache_file {cache_file} for calibration")
+        else:
+            log(Level.Debug, "Overwriting existing calibration cache file.")
         # Define attributes and member functions for the calibrator class
         attribute_mapping = {
             "data_loader": dataloader,
@@ -166,10 +159,7 @@ class CacheCalibrator(object):
         algo_type = kwargs.get("algo_type", CalibrationAlgo.ENTROPY_CALIBRATION_2)
 
         if os.path.isfile(cache_file):
-            log(
-                Level.Debug,
-                "Using existing cache_file {} for calibration".format(cache_file),
-            )
+            log(Level.Debug, f"Using existing cache_file {cache_file} for calibration")
         else:
             log(Level.Error, "Invalid calibration cache file.")
 
@@ -187,17 +177,17 @@ class CacheCalibrator(object):
             return type(
                 "DataLoaderCalibrator", (_C.IInt8EntropyCalibrator,), attribute_mapping
             )()
-        elif algo_type == CalibrationAlgo.ENTROPY_CALIBRATION_2:
+        elif (
+            algo_type == CalibrationAlgo.ENTROPY_CALIBRATION_2
+            or algo_type != CalibrationAlgo.LEGACY_CALIBRATION
+            and algo_type == CalibrationAlgo.MINMAX_CALIBRATION
+        ):
             return type(
                 "DataLoaderCalibrator", (_C.IInt8MinMaxCalibrator,), attribute_mapping
             )()
         elif algo_type == CalibrationAlgo.LEGACY_CALIBRATION:
             return type(
                 "DataLoaderCalibrator", (_C.IInt8LegacyCalibrator,), attribute_mapping
-            )()
-        elif algo_type == CalibrationAlgo.MINMAX_CALIBRATION:
-            return type(
-                "DataLoaderCalibrator", (_C.IInt8MinMaxCalibrator,), attribute_mapping
             )()
         else:
             log(

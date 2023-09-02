@@ -91,7 +91,7 @@ class AccShapeProp(shape_prop.ShapeProp):
         xl_weights instead of just the ones treated here.
         """
 
-        op = n.target.__module__ + "." + n.target.__name__
+        op = f"{n.target.__module__}.{n.target.__name__}"
 
         if op.endswith("acc_ops.int_nbit_split_embedding_codegen_lookup_function"):
             output_dtype_int = n.kwargs["output_dtype"]

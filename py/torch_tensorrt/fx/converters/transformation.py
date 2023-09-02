@@ -33,8 +33,7 @@ def torch_flatten(network, target, args, kwargs, name):
         if i < start_dim:
             new_shape.append(dim)
         elif i > end_dim:
-            new_shape.append(flatten_dim)
-            new_shape.append(dim)
+            new_shape.extend((flatten_dim, dim))
         else:
             flatten_dim *= dim
 

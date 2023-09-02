@@ -23,13 +23,16 @@ class ClampNumericalLimitsTest(unittest.TestCase):
         torch.manual_seed(0)
 
     def test_clamp_numerical_limits_to_fp16(self):
+
+
+
         class TestModule(torch.nn.Module):
             def __init__(self):
                 super().__init__()
 
             def forward(self, x):
-                y = torch.clamp(x + x, min=-1e8, max=1e8)
-                return y
+                return torch.clamp(x + x, min=-1e8, max=1e8)
+
 
         module = TestModule()
         inputs = [torch.rand(3, 2, 1)]

@@ -24,9 +24,10 @@ class Substitution:
 
 
 # Dictionary mapping module to Substitution instance
+# Dictionary mapping module to Substitution instance
 SUBSTITUTION_REGISTRY: Dict[
     Union[Type[torch.nn.Module], Callable], Substitution
-] = dict()
+] = {}
 
 
 def register_substitution(

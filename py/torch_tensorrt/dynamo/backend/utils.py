@@ -27,29 +27,13 @@ def prepare_inputs(
         return inputs
 
     elif isinstance(inputs, list):
-        prepared_input = list()
-
-        for input_obj in inputs:
-            prepared_input.append(prepare_inputs(input_obj))
-
-        return prepared_input
-
+        return [prepare_inputs(input_obj) for input_obj in inputs]
     elif isinstance(inputs, tuple):
-        prepared_input = list()
-
-        for input_obj in inputs:
-            prepared_input.append(prepare_inputs(input_obj))
-
+        prepared_input = [prepare_inputs(input_obj) for input_obj in inputs]
         return tuple(prepared_input)
 
     elif isinstance(inputs, dict):
-        prepared_input = dict()
-
-        for key, input_obj in inputs.items():
-            prepared_input[key] = prepare_inputs(input_obj)
-
-        return prepared_input
-
+        return {key: prepare_inputs(input_obj) for key, input_obj in inputs.items()}
     else:
         raise ValueError(
             f"Invalid input type {type(inputs)} encountered in the dynamo_compile input parsing. "

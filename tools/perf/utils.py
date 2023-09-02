@@ -28,7 +28,7 @@ BENCHMARK_MODELS = {
 def precision_to_dtype(pr):
     if pr == "fp32":
         return torch.float
-    elif pr == "fp16" or pr == "half":
+    elif pr in ["fp16", "half"]:
         return torch.half
     elif pr == "int32":
         return torch.int32
@@ -42,15 +42,16 @@ def parse_inputs(user_inputs, dtype):
     parsed_inputs = user_inputs.split(";")
     torchtrt_inputs = []
     for input in parsed_inputs:
-        input_shape = []
         input_shape_and_dtype = input.split("@")
         dtype = (
             precision_to_dtype(input_shape_and_dtype[1])
             if len(input_shape_and_dtype) == 2
             else dtype
         )
-        for input_dim in input_shape_and_dtype[0][1:-1].split(","):
-            input_shape.append(int(input_dim))
+        input_shape = [
+            int(input_dim)
+            for input_dim in input_shape_and_dtype[0][1:-1].split(",")
+        ]
         torchtrt_inputs.append(torch.randint(0, 5, input_shape, dtype=dtype).cuda())
 
     return torchtrt_inputs

@@ -25,9 +25,7 @@ output = subprocess.run(
 comment = """Code conforms to C++ style guidelines"""
 approval = "APPROVE"
 if output.returncode != 0:
-    comment = """There are some changes that do not conform to C++ style guidelines:\n ```diff\n{}```""".format(
-        output.stdout.decode("utf-8")
-    )
+    comment = f"""There are some changes that do not conform to C++ style guidelines:\n ```diff\n{output.stdout.decode("utf-8")}```"""
     approval = "REQUEST_CHANGES"
 
 try:

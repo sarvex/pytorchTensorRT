@@ -24,7 +24,4 @@ def tensorrt_converter(
     def disable_converter(converter):
         return converter
 
-    if enabled:
-        return register_converter
-    else:
-        return disable_converter
+    return register_converter if enabled else disable_converter

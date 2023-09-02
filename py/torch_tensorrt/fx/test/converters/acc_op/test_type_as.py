@@ -9,17 +9,20 @@ from torch_tensorrt.fx.utils import LowerPrecision
 
 class TestTypeAsConverter(AccTestCase):
     def test_device_fp32(self):
+
+
+
         class Type_as(torch.nn.Module):
             def __init__(self):
                 super().__init__()
                 self.a = torch.randn(2, 2)
 
             def forward(self, x):
-                b = self.a.type_as(x)
-                return b
+                return self.a.type_as(x)
+                        # self.a = self.a.type_as(x) # error is throw
+                        # return self.a
 
-                # self.a = self.a.type_as(x) # error is throw
-                # return self.a
+
 
         input = torch.randn(2, 2).cuda()
         inputs = [

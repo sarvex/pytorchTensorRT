@@ -221,5 +221,9 @@ def quantized_conv_relu2d(network, submod, args, kwargs, layer_name):
     )
 
     return activation.relu(
-        network, submod._get_name(), SourceIR.NN, layer_name + "_relu", conv_out
+        network,
+        submod._get_name(),
+        SourceIR.NN,
+        f"{layer_name}_relu",
+        conv_out,
     )

@@ -11,7 +11,7 @@ import os
 
 def find_repo_root(max_depth=10):
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    for i in range(max_depth):
+    for _ in range(max_depth):
         files = os.listdir(dir_path)
         if "WORKSPACE" in files:
             return dir_path
@@ -21,7 +21,7 @@ def find_repo_root(max_depth=10):
     raise RuntimeError("Could not find repo root")
 
 
-MODULE_DIR = find_repo_root() + "/tests/modules"
+MODULE_DIR = f"{find_repo_root()}/tests/modules"
 
 
 def compute_accuracy(testing_dataloader, model):
@@ -32,7 +32,6 @@ def compute_accuracy(testing_dataloader, model):
     class_preds = []
     device = torch.device("cuda:0")
     with torch.no_grad():
-        idx = 0
         for data, labels in testing_dataloader:
             data, labels = data.to(device), labels.to(device)
             out = model(data)
@@ -41,8 +40,6 @@ def compute_accuracy(testing_dataloader, model):
             class_preds.append(preds)
             total += labels.size(0)
             correct += (preds == labels).sum().item()
-            idx += 1
-
     test_probs = torch.cat([torch.stack(batch) for batch in class_probs])
     test_preds = torch.cat(class_preds)
     return correct / total
@@ -51,7 +48,7 @@ def compute_accuracy(testing_dataloader, model):
 class TestAccuracy(unittest.TestCase):
     def test_compile_script(self):
         self.model = (
-            torch.jit.load(MODULE_DIR + "/trained_vgg16.jit.pt").eval().to("cuda")
+            torch.jit.load(f"{MODULE_DIR}/trained_vgg16.jit.pt").eval().to("cuda")
         )
         self.input = torch.randn((1, 3, 32, 32)).to("cuda")
         self.testing_dataset = torchvision.datasets.CIFAR10(

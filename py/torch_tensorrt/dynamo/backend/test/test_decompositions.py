@@ -41,13 +41,16 @@ class TestLowering(TestCase):
         )
 
     def test_lowering_alias_replacement(self):
+
+
+
         class Alias(torch.nn.Module):
             def __init__(self, *args, **kwargs) -> None:
                 super().__init__(*args, **kwargs)
 
             def forward(self, x):
-                y = torch.ops.aten.alias.default(x)
-                return y
+                return torch.ops.aten.alias.default(x)
+
 
         # Operations expected to be removed in the traced graph after decompositions
         unexpected_ops = {torch.ops.aten.alias.default}
@@ -70,13 +73,16 @@ class TestLowering(TestCase):
         )
 
     def test_lowering_rsqrt(self):
+
+
+
         class Rsqrt(torch.nn.Module):
             def __init__(self, *args, **kwargs) -> None:
                 super().__init__(*args, **kwargs)
 
             def forward(self, x):
-                y = torch.ops.aten.rsqrt.default(x)
-                return y
+                return torch.ops.aten.rsqrt.default(x)
+
 
         # Operations expected to be removed in the traced graph after decompositions
         expected_ops = {torch.ops.aten.sqrt.default, torch.ops.aten.reciprocal.default}
@@ -112,6 +118,7 @@ class TestLowering(TestCase):
         )
 
     def test_lowering_addmm(self):
+
         class AddMM(torch.nn.Module):
             def forward(self, x, y, z):
                 return torch.addmm(x, y, z, beta=16, alpha=5)
@@ -176,7 +183,7 @@ class TestLowering(TestCase):
             max_diff,
             0,
             DECIMALS_OF_AGREEMENT,
-            f"AddMM TRT outputs don't match with the original model.",
+            "AddMM TRT outputs don't match with the original model.",
         )
 
 

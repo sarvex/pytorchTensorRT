@@ -52,8 +52,7 @@ def lower_to_trt(model, inputs, shape_ranges):
         model, input_specs, explicit_batch_dimension=True, explicit_precision=True
     )
     result = interp.run(lower_precision=LowerPrecision.INT8)
-    trt_mod = TRTModule(result.engine, result.input_names, result.output_names)
-    return trt_mod
+    return TRTModule(result.engine, result.input_names, result.output_names)
 
 
 class TestConvertFxDoNotUse(QuantizationTestCase):
@@ -454,20 +453,20 @@ class TestQuantizeFxTRTOps(QuantizationTestCase):
         conv3d_input = torch.rand(1, 3, 10, 10, 10)
         conv_input = {1: conv1d_input, 2: conv2d_input, 3: conv3d_input}
 
+
+
         class ConvNdModule(torch.nn.Module):
             def __init__(self, dim, has_relu=False, f_relu=False):
                 super().__init__()
                 self.conv = conv_module[dim](3, 3, 3).float()
                 if has_relu:
-                    if f_relu:
-                        self.relu = F.relu
-                    else:
-                        self.relu = torch.nn.ReLU()
+                    self.relu = F.relu if f_relu else torch.nn.ReLU()
                 else:
                     self.relu = torch.nn.Identity()
 
             def forward(self, x):
                 return self.relu(self.conv(x))
+
 
         # just testing conv2d since conv1d and conv3d are not supported in fx2trt
         for dim, has_relu, f_relu, is_qat in itertools.product(
@@ -494,20 +493,21 @@ class TestQuantizeFxTRTOps(QuantizationTestCase):
             )
 
     def test_linear_relu_module(self):
+
+
+
         class LinearModule(torch.nn.Module):
             def __init__(self, has_relu=False, f_relu=False):
                 super().__init__()
                 self.linear = torch.nn.Linear(5, 10).float()
                 if has_relu:
-                    if f_relu:
-                        self.relu = F.relu
-                    else:
-                        self.relu = torch.nn.ReLU()
+                    self.relu = F.relu if f_relu else torch.nn.ReLU()
                 else:
                     self.relu = torch.nn.Identity()
 
             def forward(self, x):
                 return self.relu(self.linear(x))
+
 
         linear_input = torch.rand(8, 5)
 

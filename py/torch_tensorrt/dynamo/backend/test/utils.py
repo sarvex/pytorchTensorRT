@@ -109,7 +109,7 @@ def same_output_format(trt_output, torch_output, enforce_tensor_type=True):
                 for key in trt_output.keys()
             )
         )
-    elif isinstance(trt_output, set) or isinstance(trt_output, frozenset):
+    elif isinstance(trt_output, (set, frozenset)):
         raise AssertionError(
             "Unsupported output type 'set' encountered in output format check."
         )

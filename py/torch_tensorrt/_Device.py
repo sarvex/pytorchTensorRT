@@ -55,44 +55,40 @@ class Device(object):
                 raise TypeError(
                     "When specifying Device through positional argument, argument must be str"
                 )
+            (self.device_type, id) = Device._parse_device_str(args[0])
+            if self.device_type == trt.DeviceType.GPU:
+                self.gpu_id = id
             else:
-                (self.device_type, id) = Device._parse_device_str(args[0])
-                if self.device_type == trt.DeviceType.GPU:
-                    self.gpu_id = id
+                self.dla_core = id
+                self.gpu_id = 0
+                logging.log(
+                    logging.Level.Warning,
+                    "Setting GPU id to 0 for device because device 0 manages DLA on Xavier",
+                )
+
+        elif not args:
+            if "gpu_id" not in kwargs and "dla_core" not in kwargs:
+                raise ValueError(
+                    "Either gpu_id or dla_core or both must be defined if no string with device specs is provided as an arg"
+                )
+
+            if "dla_core" in kwargs:
+                self.device_type = trt.DeviceType.DLA
+                self.dla_core = kwargs["dla_core"]
+                if "gpu_id" in kwargs:
+                    self.gpu_id = kwargs["gpu_id"]
                 else:
-                    self.dla_core = id
                     self.gpu_id = 0
                     logging.log(
                         logging.Level.Warning,
                         "Setting GPU id to 0 for device because device 0 manages DLA on Xavier",
                     )
-
-        elif len(args) == 0:
-            if "gpu_id" in kwargs or "dla_core" in kwargs:
-                if "dla_core" in kwargs:
-                    self.device_type = trt.DeviceType.DLA
-                    self.dla_core = kwargs["dla_core"]
-                    if "gpu_id" in kwargs:
-                        self.gpu_id = kwargs["gpu_id"]
-                    else:
-                        self.gpu_id = 0
-                        logging.log(
-                            logging.Level.Warning,
-                            "Setting GPU id to 0 for device because device 0 manages DLA on Xavier",
-                        )
-                else:
-                    self.gpu_id = kwargs["gpu_id"]
-                    self.device_type = trt.DeviceType.GPU
             else:
-                raise ValueError(
-                    "Either gpu_id or dla_core or both must be defined if no string with device specs is provided as an arg"
-                )
-
+                self.gpu_id = kwargs["gpu_id"]
+                self.device_type = trt.DeviceType.GPU
         else:
             raise ValueError(
-                "Unexpected number of positional arguments for class Device \n    Found {} arguments, expected either zero or a single positional arguments".format(
-                    len(args)
-                )
+                f"Unexpected number of positional arguments for class Device \n    Found {len(args)} arguments, expected either zero or a single positional arguments"
             )
 
         if "allow_gpu_fallback" in kwargs:
@@ -102,11 +98,9 @@ class Device(object):
 
     def __str__(self) -> str:
         return (
-            "Device(type={}, gpu_id={}".format(self.device_type, self.gpu_id) + ")"
+            f"Device(type={self.device_type}, gpu_id={self.gpu_id})"
             if self.device_type == trt.DeviceType.GPU
-            else ", dla_core={}, allow_gpu_fallback={}".format(
-                self.dla_core, self.allow_gpu_fallback
-            )
+            else f", dla_core={self.dla_core}, allow_gpu_fallback={self.allow_gpu_fallback}"
         )
 
     def _to_internal(self) -> _C.Device:
@@ -149,7 +143,7 @@ class Device(object):
     def _parse_device_str(s):
         s = s.lower()
         spec = s.split(":")
-        if spec[0] == "gpu" or spec[0] == "cuda":
+        if spec[0] in ["gpu", "cuda"]:
             return (trt.DeviceType.GPU, int(spec[1]))
         elif spec[0] == "dla":
             return (trt.DeviceType.DLA, int(spec[1]))

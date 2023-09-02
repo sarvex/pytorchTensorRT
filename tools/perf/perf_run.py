@@ -51,7 +51,7 @@ class ConfigParser:
 
     # Retrieves the value from the configuration else uses default values
     def get(self, key, default_value=None):
-        if not key in self.params:
+        if key not in self.params:
             if not default_value:
                 raise ValueError(
                     "Key {} is not present and default_value is not configured. Please run it with default value",
@@ -75,7 +75,7 @@ def run_torch(model, input_tensors, params, precision, batch_size):
 
     timings = []
     with torch.no_grad():
-        for i in range(iters):
+        for _ in range(iters):
             start_time = timeit.default_timer()
             features = model(*input_tensors)
             torch.cuda.synchronize()
@@ -104,7 +104,7 @@ def run_torch_tensorrt(
     }
 
     if precision == "int8":
-        compile_settings.update({"calib": params.get("calibration_cache")})
+        compile_settings["calib"] = params.get("calibration_cache")
 
     start_compile = time.time_ns()
     model = torchtrt.compile(model, **compile_settings)
@@ -121,7 +121,7 @@ def run_torch_tensorrt(
 
     timings = []
     with torch.no_grad():
-        for i in range(iters):
+        for _ in range(iters):
             start_time = timeit.default_timer()
             features = model(*input_tensors)
             torch.cuda.synchronize()
@@ -160,7 +160,7 @@ def run_fx2trt(model, input_tensors, params, precision, batch_size):
 
     timings = []
     with torch.no_grad():
-        for i in range(iters):
+        for _ in range(iters):
             start_time = timeit.default_timer()
             features = model(*input_tensors)
             torch.cuda.synchronize()
@@ -185,7 +185,7 @@ def run_dynamo(model, input_tensors, params, precision, batch_size):
     if precision == "fp16":
         input_tensors = [tensor.half() for tensor in input_tensors]
 
-    fp16_mode = True if precision == "fp16" else False
+    fp16_mode = precision == "fp16"
     # dynamo_backend_params = {"fp16_mode" : fp16_mode}
     # model = torch.compile(
     #     model,
@@ -221,7 +221,7 @@ def run_dynamo(model, input_tensors, params, precision, batch_size):
         torch.cuda.synchronize()
         print("============= DONE 2 ==================")
         timings = []
-        for i in range(iters):
+        for _ in range(iters):
             start_time = timeit.default_timer()
             features = exported_model(*input_tensors)
             torch.cuda.synchronize()
@@ -246,7 +246,7 @@ def torch_dtype_from_trt(dtype):
     elif dtype == trt.float32:
         return torch.float32
     else:
-        raise TypeError("%s is not supported by torch" % dtype)
+        raise TypeError(f"{dtype} is not supported by torch")
 
 
 def torch_device_from_trt(device):
@@ -255,7 +255,7 @@ def torch_device_from_trt(device):
     elif device == trt.TensorLocation.HOST:
         return torch.device("cpu")
     else:
-        return TypeError("%s is not supported by torch" % device)
+        return TypeError(f"{device} is not supported by torch")
 
 
 def run_tensorrt(
@@ -309,11 +309,11 @@ def run_tensorrt(
 
     timings = []
     with engine.create_execution_context() as context:
-        for i in range(WARMUP_ITER):
+        for _ in range(WARMUP_ITER):
             context.execute_async_v2(bindings, torch.cuda.current_stream().cuda_stream)
             torch.cuda.synchronize()
 
-        for i in range(iters):
+        for _ in range(iters):
             start_time = timeit.default_timer()
             context.execute_async_v2(bindings, torch.cuda.current_stream().cuda_stream)
             torch.cuda.synchronize()
@@ -338,7 +338,7 @@ def run(
 ):
     for backend in backends:
         if precision == "int8":
-            if backend == "all" or backend == "torch":
+            if backend in ["all", "torch"]:
                 print(
                     "int8 precision is not supported for torch runtime in this script yet"
                 )
@@ -347,7 +347,7 @@ def run(
             if (
                 backend == "all"
                 or backend == "torch_tensorrt"
-                or params.get("calibration_cache", None) == None
+                or params.get("calibration_cache", None) is None
             ):
                 print("int8 precision expects calibration cache file for inference")
                 return False
@@ -606,12 +606,12 @@ if __name__ == "__main__":
             input_tensors = []
             num_input = params.get("input").get("num_inputs", 1)
             for i in range(num_input):
-                inp_tensor = params.get("input").get("input" + str(i))
+                inp_tensor = params.get("input").get(f"input{str(i)}")
                 input_tensors.append(
                     torch.randint(
                         0,
                         2,
-                        tuple(d for d in inp_tensor),
+                        tuple(inp_tensor),
                         dtype=precision_to_dtype(precision),
                     ).cuda()
                 )
@@ -621,7 +621,7 @@ if __name__ == "__main__":
                     "Warning, TensorRT engine file is configured. Please make sure the precision matches with the TRT engine for reliable results"
                 )
 
-            if not is_trt_engine and (precision == "fp16" or precision == "half"):
+            if not is_trt_engine and precision in ["fp16", "half"]:
                 # If model is TensorRT serialized engine then model.half will report failure
                 if model is not None:
                     model = model.half()
@@ -686,7 +686,7 @@ if __name__ == "__main__":
                 params["inputs"], precision_to_dtype(precision)
             )
 
-            if not is_trt_engine and (precision == "fp16" or precision == "half"):
+            if not is_trt_engine and precision in ["fp16", "half"]:
                 # If model is TensorRT serialized engine then model.half will report failure
                 model = model.half()
 

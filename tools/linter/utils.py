@@ -35,7 +35,7 @@ VALID_PY_FILE_TYPES = [".py"]
 def CHECK_PROJECTS(projs):
     for p in projs:
         if p[:2] != "//":
-            sys.exit(p + " is not a valid bazel target")
+            sys.exit(f"{p} is not a valid bazel target")
     return projs
 
 
@@ -45,7 +45,7 @@ def find_bazel_root():
     """
     curdir = os.path.dirname(os.path.realpath(__file__))
     while 1:
-        if os.path.exists(curdir + "/WORKSPACE"):
+        if os.path.exists(f"{curdir}/WORKSPACE"):
             return curdir
         if curdir == "/":
             sys.exit("Error: was unable to find a bazel workspace")
@@ -55,5 +55,5 @@ def find_bazel_root():
 def glob_files(project, file_types):
     files = []
     for t in file_types:
-        files += glob.glob(project + "/**/*" + t, recursive=True)
+        files += glob.glob(f"{project}/**/*{t}", recursive=True)
     return files

@@ -9,7 +9,7 @@ class TimingCacheManager:
         # Setting timing cache for TRTInterpreter
         tc = os.environ.get("TRT_TIMING_CACHE_PREFIX", "")
         timing_cache_prefix_name = timing_cache_prefix
-        if not timing_cache_prefix and tc:
+        if not timing_cache_prefix_name and tc:
             timing_cache_prefix_name = tc
 
         self.timing_cache_prefix_name = timing_cache_prefix_name
